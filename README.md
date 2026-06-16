@@ -1,14 +1,142 @@
 # ClauseLens
 
-ClauseLens is a contract-intelligence RAG prototype for finding and citing clause-level evidence in legal agreements. It turns CUAD contract labels into searchable evidence records, embeds them with Sentence Transformers, stores them in Qdrant, and exposes the retrieval layer through a CLI, FastAPI service, Streamlit demo, and repeatable evaluation script.
+ClauseLens is a contract intelligence search prototype. It helps a user ask plain-English questions about legal agreements and retrieve the most relevant clause evidence, with source information attached so the answer can be checked against the original contract.
 
-This is a portfolio-grade retrieval foundation. It does not provide legal advice and does not generate LLM answers yet; every result is grounded in retrieved source evidence.
+The project is built around the CUAD contract dataset. It prepares labeled contract clauses, embeds them with Sentence Transformers, stores them in Qdrant, and exposes the search layer through a command-line tool, FastAPI service, Streamlit demo, and retrieval evaluation script.
 
-## Portfolio Pitch
+This repository is not a legal advice tool. It is a portfolio project showing how retrieval-augmented generation foundations can be built responsibly before adding an LLM answer layer.
 
-- Built a contract-intelligence RAG prototype over CUAD using Sentence Transformers and Qdrant.
-- Implemented metadata-filtered semantic search with source-grounded clause citations.
-- Added FastAPI and Streamlit demo surfaces plus retrieval evaluation metrics.
+## Why This Exists
+
+Contract review is slow because useful information is often buried inside long agreements. ClauseLens focuses on the first step: finding the right evidence quickly.
+
+Instead of asking a model to immediately generate an answer, the system first retrieves the clauses that support an answer. This makes the workflow easier to inspect, easier to evaluate, and safer for a domain where citation and traceability matter.
+
+## Benefits
+
+- Finds contract evidence using natural-language questions, not only exact keyword search.
+- Supports filtering by clause type, such as audit rights, assignment restrictions, liability caps, license grants, and termination rights.
+- Returns source metadata with each result, including source PDF name, TXT path, document ID, answer label, score, and evidence text.
+- Includes a repeatable evaluation script so retrieval quality can be measured instead of judged only by manual testing.
+- Provides both a FastAPI backend and a Streamlit demo UI for easier review.
+
+## Current Demo Surfaces
+
+- CLI search for quick local testing.
+- FastAPI service with `/health`, `/clause-types`, and `/search`.
+- Streamlit UI with query input, clause-type filter, top-k control, evidence cards, and evaluation summary panel.
+- JSONL-based evaluation cases for repeatable retrieval checks.
+
+## Run Commands
+
+Use the project conda environment if you are working in this existing workspace:
+
+```powershell
+.\.conda-clauselens\python.exe scripts\prepare_cuad_subset.py
+.\.conda-clauselens\python.exe scripts\index_qdrant.py --qdrant-path data/qdrant_local --recreate
+```
+
+Run the API:
+
+```powershell
+.\.conda-clauselens\python.exe -m uvicorn app.api:app --reload
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Run the Streamlit demo:
+
+```powershell
+.\.conda-clauselens\python.exe -m streamlit run app\streamlit_app.py
+```
+
+Run retrieval evaluation:
+
+```powershell
+.\.conda-clauselens\python.exe evaluation\eval.py --top-k 5
+```
+
+Save evaluation output for the Streamlit sidebar:
+
+```powershell
+.\.conda-clauselens\python.exe evaluation\eval.py --top-k 5 --output data\processed\eval_results.json
+```
+
+Run tests:
+
+```powershell
+.\.conda-clauselens\python.exe -m pytest
+.\.conda-clauselens\python.exe -m ruff check .
+```
+
+For a fresh environment, install dependencies first:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+## Screenshots
+
+Add screenshots here after capturing the local demo.
+
+### Streamlit Search Demo
+
+### API Docs
+
+### Evaluation Summary
+
+## Evaluation Insights
+
+The latest local retrieval evaluation used 10 plain-English contract review questions across the starter clause types.
+
+Results:
+
+```text
+Passed: 9/10
+Top result was the right clause type: 90%
+Right clause appeared somewhere in the top 5: 100%
+Expected evidence words were found: 100%
+```
+
+In plain English, ClauseLens usually puts the right clause at the top of the results. Even when it missed the top spot, it still found the right evidence within the first five results.
+
+The one weaker case was a question about intellectual property usage rights. The system found a relevant license-grant clause, but ranked it fourth instead of first. That is useful feedback: the next quality improvement should focus on better ranking for questions where the wording changes from "license" to related concepts like "right to use intellectual property."
+
+Overall, the evaluation suggests the current prototype is strong enough for a portfolio demo. It also shows a clear next step: add reranking or more diverse evaluation examples before claiming production-level retrieval quality.
+
+## Dataset Snapshot
+
+The current starter subset contains:
+
+```text
+Documents: 30
+Clause evidence records: 463
+```
+
+Clause evidence counts:
+
+```text
+Anti-Assignment: 71
+Audit Rights: 165
+Cap On Liability: 90
+License Grant: 116
+Termination For Convenience: 21
+```
+
+Expected CUAD files:
+
+```text
+data/cuad/CUAD_v1/master_clauses.csv
+data/cuad/CUAD_v1/CUAD_v1.json
+data/cuad/CUAD_v1/full_contract_txt/Part_I
+data/cuad/CUAD_v1/full_contract_txt/Part_II
+```
+
+Raw CUAD data and local Qdrant storage are ignored by Git because they are large local artifacts.
 
 ## Architecture
 
@@ -22,35 +150,18 @@ scripts/prepare_cuad_subset.py
 data/processed/starter_clause_evidence.jsonl
         |
         v
-scripts/index_qdrant.py --> SentenceTransformer embeddings --> Qdrant
+scripts/index_qdrant.py
+        |
+        v
+SentenceTransformer embeddings -> Qdrant
         |
         v
 app/rag.py shared retrieval helpers
         |
         +--> scripts/search_qdrant.py
-        +--> app/api.py FastAPI service
-        +--> app/streamlit_app.py Streamlit demo
-        +--> evaluation/eval.py retrieval metrics
-```
-
-## What It Does
-
-- Reads CUAD `master_clauses.csv` and matching contract TXT files.
-- Extracts starter clause evidence for selected legal clause types.
-- Embeds evidence text with `BAAI/bge-small-en-v1.5`.
-- Stores vectors and citation metadata in embedded local Qdrant by default.
-- Searches by natural-language query with optional clause-type filtering.
-- Returns source PDF, TXT path, document ID, answer label, score, and evidence text.
-- Reports retrieval metrics: pass count, clause-type MRR, nDCG, top-k hit rate, and keyword coverage.
-
-Starter clause types:
-
-```text
-Anti-Assignment
-Audit Rights
-Cap On Liability
-License Grant
-Termination For Convenience
+        +--> app/api.py
+        +--> app/streamlit_app.py
+        +--> evaluation/eval.py
 ```
 
 ## Project Structure
@@ -76,95 +187,15 @@ tests/                    unit tests for data prep, retrieval, eval, and API
 docs/                     setup notes, dataset notes, developer notes, plan
 ```
 
-## Setup
+## API Example
 
-Use Python 3.11. The local conda environment in this workspace has the needed dependencies:
-
-```powershell
-.\.conda-clauselens\python.exe -m pytest
-```
-
-For a fresh environment:
+Start the API:
 
 ```powershell
-python -m pip install -r requirements.txt
+.\.conda-clauselens\python.exe -m uvicorn app.api:app --reload
 ```
 
-The `.venv` folder in this workspace may not contain the full dependency set. If tests fail with missing packages, install `requirements.txt` into that environment or use `.conda-clauselens`.
-
-## Prepare Data
-
-Expected CUAD files:
-
-```text
-data/cuad/CUAD_v1/master_clauses.csv
-data/cuad/CUAD_v1/CUAD_v1.json
-data/cuad/CUAD_v1/full_contract_txt/Part_I
-data/cuad/CUAD_v1/full_contract_txt/Part_II
-```
-
-Create the starter evidence records:
-
-```powershell
-python scripts\prepare_cuad_subset.py
-```
-
-This writes:
-
-```text
-data/processed/starter_clause_evidence.jsonl
-data/processed/starter_summary.json
-```
-
-## Index Into Qdrant
-
-Embedded local Qdrant mode does not require Docker:
-
-```powershell
-python scripts\index_qdrant.py --qdrant-path data/qdrant_local --recreate
-```
-
-Server mode expects Qdrant at `http://localhost:6333`:
-
-```powershell
-python scripts\index_qdrant.py --recreate
-```
-
-With Docker installed:
-
-```powershell
-docker run -p 6333:6333 -p 6334:6334 -v ${PWD}\data\qdrant_storage:/qdrant/storage qdrant/qdrant
-```
-
-## Run Search
-
-CLI search:
-
-```powershell
-python scripts\search_qdrant.py "Does the contract restrict assignment?"
-```
-
-Filter by clause type:
-
-```powershell
-python scripts\search_qdrant.py "What audit rights does the customer have?" --clause-type "Audit Rights"
-```
-
-## Run The API
-
-Start FastAPI:
-
-```powershell
-uvicorn app.api:app --reload
-```
-
-Health check:
-
-```powershell
-curl http://localhost:8000/health
-```
-
-Search request:
+Search:
 
 ```powershell
 curl -X POST http://localhost:8000/search `
@@ -194,56 +225,27 @@ Example response shape:
 }
 ```
 
-## Run The Streamlit Demo
-
-```powershell
-streamlit run app\streamlit_app.py
-```
-
-The UI provides query search, clause-type filtering, top-k controls, citation-rich result cards, and a compact evaluation panel. To populate the evaluation panel, save an eval report first:
-
-```powershell
-python evaluation\eval.py --top-k 5 --output data\processed\eval_results.json
-```
-
-Screenshot placeholder:
-
-```text
-docs/assets/streamlit-demo.png
-```
-
-## Evaluation
-
-Run retrieval evaluation after indexing:
-
-```powershell
-python evaluation\eval.py --top-k 5
-```
-
-Save detailed rows:
-
-```powershell
-python evaluation\eval.py --top-k 5 --output data\processed\eval_results.json
-```
-
-The evaluation checks whether natural-language contract questions retrieve the expected clause type and evidence keywords in the top-k results.
-
-## Tests
-
-Run:
-
-```powershell
-python -m pytest
-python -m py_compile app\api.py app\cuad.py app\rag.py app\streamlit_app.py scripts\prepare_cuad_subset.py scripts\index_qdrant.py scripts\search_qdrant.py evaluation\cases.py evaluation\eval.py
-```
+## Tests And Quality Checks
 
 Current tests cover:
 
-- CUAD filename and evidence parsing helpers.
+- CUAD filename matching and evidence parsing.
 - starter-record selection.
 - retrieval query validation and Qdrant call shape.
 - retrieval evaluation scoring and export.
-- FastAPI health, clause type, search, and validation endpoints.
+- FastAPI health, clause-type, search, and validation endpoints.
+
+Verification commands:
+
+```powershell
+.\.conda-clauselens\python.exe -m pytest
+.\.conda-clauselens\python.exe -m ruff check .
+.\.conda-clauselens\python.exe -m py_compile app\api.py app\cuad.py app\rag.py app\streamlit_app.py scripts\prepare_cuad_subset.py scripts\index_qdrant.py scripts\search_qdrant.py evaluation\cases.py evaluation\eval.py
+```
+
+## Resume Summary
+
+Built ClauseLens, a contract intelligence retrieval prototype over CUAD using Sentence Transformers and Qdrant. Implemented metadata-filtered semantic search, source-grounded clause evidence, FastAPI and Streamlit demo surfaces, and retrieval evaluation with clear quality insights.
 
 ## Current Status
 
@@ -260,12 +262,8 @@ Implemented:
 
 Next:
 
-- full-contract chunking with `start_char` and `end_char`.
-- reranking for harder semantic queries.
-- grounded LLM answer generation with citations.
-- citation correctness and answer faithfulness evaluation.
-- deployment packaging.
-
-## Notes
-
-ClauseLens is a learning and portfolio project, not a legal advice tool. Search results and future generated answers should always be checked against the original contract text.
+- add screenshots to this README.
+- add full-contract chunking with character spans.
+- add reranking for harder semantic matches.
+- add grounded LLM answer generation with citations.
+- add citation correctness and answer faithfulness evaluation.
