@@ -1,123 +1,200 @@
 # ClauseLens
 
-ClauseLens is a contract intelligence RAG chatbot. It helps a user ask plain-English questions about legal agreements, retrieve the most relevant clause evidence, and generate grounded answers with source information attached so the result can be checked against the original contract.
+> A citation-grounded RAG chatbot that helps legal, procurement, and compliance
+> teams find contract risks, rights, and obligations faster.
 
-Using 463 clause records from 30 real-world CUAD contracts, the final system
-achieved 100% Recall@5, 98.2% context precision, and 1.000 MRR on the
-passage-level retrieval evaluation. A 120-request answer benchmark achieved
-100% deterministic accuracy and citation validity with 2.43-second P95
-end-to-end latency.
+ClauseLens answers plain-English questions using evidence retrieved from
+real-world contracts in the CUAD dataset. Every generated answer includes
+source-backed citations so users can verify the result against the retrieved
+contract language.
 
-Project documentation:
+This is a portfolio project and not a legal advice tool.
 
-- [`docs/prd.md`](docs/prd.md): product requirements and development rules.
-- [`docs/notes.md`](docs/notes.md): architecture, terminology, and operating notes.
-- [`docs/experiments.md`](docs/experiments.md): retrieval, quality, and latency experiments.
-- [`docs/performance_results_2026-06-22.md`](docs/performance_results_2026-06-22.md): latest model, tier, and reranking benchmark.
+## Verified Results
 
-The project is built around the CUAD contract dataset. It prepares labeled contract clauses, embeds them with Sentence Transformers, stores them in Qdrant, and exposes the search layer through a command-line tool, FastAPI service, Streamlit demo, and retrieval evaluation script.
+The final configuration was evaluated on 463 clause records from 30 CUAD
+contracts.
 
-This repository is not a legal advice tool. It is a portfolio project showing how retrieval-augmented generation foundations can be built responsibly for contract review.
+### Retrieval
 
-## Why This Exists
+| Metric | Result |
+| --- | ---: |
+| Recall@5 | **100%** |
+| Context precision | **98.2%** |
+| MRR | **1.000** |
+| nDCG | **0.998** |
+| P95 retrieval latency | **68.2 ms** |
+| P95 reranking latency | **124.6 ms** |
+| Evaluation cases passed | **11/11** |
 
-Contract review is slow because useful information is often buried inside long agreements. ClauseLens focuses on the first step: finding the right evidence quickly.
+### End-to-End Chat
 
-Instead of asking a model to immediately generate an answer, the system first retrieves the clauses that support an answer. This makes the workflow easier to inspect, easier to evaluate, and safer for a domain where citation and traceability matter.
+Measured over 120 sequential requests using GPT-4.1 mini Standard:
 
-## Benefits
+| Metric | Result |
+| --- | ---: |
+| Deterministic answer accuracy | **100%** |
+| Citation validity | **100%** |
+| Answer-mode consistency | **100%** |
+| Critical failures | **0** |
+| P50 response latency | **1.69 s** |
+| P95 response latency | **2.43 s** |
+| P95 first-token latency | **1.22 s** |
 
-- Finds contract evidence using natural-language questions, not only exact keyword search.
-- Supports filtering by clause type, such as audit rights, assignment restrictions, liability caps, license grants, and termination rights.
-- Returns source metadata with each result, including source PDF name, TXT path, document ID, answer label, score, and evidence text.
-- Includes a repeatable evaluation script so retrieval quality can be measured instead of judged only by manual testing.
-- Achieves 100% Recall@5 and 98.2% context precision on the current
-  passage-level retrieval benchmark.
-- Includes live per-query telemetry and a chat latency benchmark so you can
-  isolate rewrite, embedding, vector search, reranking, and answer cost.
-- Provides both a FastAPI backend and a Streamlit demo UI for easier review.
+The system meets the practical P95 target of 2.5 seconds. It does not yet meet
+the experimental targets of P95 below 2.0 seconds or first-token latency below
+700 ms. The remaining tail latency is primarily hosted-model response time.
 
-## Current Demo Surfaces
+Detailed methodology and claim boundaries are documented in
+[the performance report](docs/performance_results_2026-06-22.md).
 
-- CLI search for quick local testing.
-- FastAPI service with `/health`, `/clause-types`, `/search`, and `/chat`.
-- Streamlit chat UI with clause-type filter, top-k control, retrieved evidence panel, and evaluation summary panel.
-- Cloudflare Worker + React public deployment that does not require an
-  always-on computer, Docker process, custom domain, or Streamlit wake screen.
-- Persistent local chat history with new-chat, reopen, and delete controls.
-- JSONL-based evaluation cases for repeatable retrieval checks.
+### Token Usage and Estimated Cost
 
-## Permanent Public Deployment
+ClauseLens keeps generation costs low by running dense retrieval, BM25 search,
+reciprocal-rank fusion, and cross-encoder reranking locally. The hosted model is
+used only for the final grounded answer, with compact evidence prompts and a
+160-token completion ceiling.
 
-The deployable application is under [`cloudflare/`](cloudflare/README.md). It
-serves the React UI and streaming API from one Cloudflare Worker and uses a
-committed static retrieval index generated from the same 463 vectors validated
-by the Python benchmark.
+| Cost indicator | Result |
+| --- | ---: |
+| Average estimated output per benchmark request | **93 tokens** |
+| Representative estimated input per generated answer | **~1,100 tokens** |
+| Estimated GPT-4.1 mini cost per generated answer | **~$0.00060** |
+| Estimated cost per 1,000 generated answers | **~$0.60** |
+| Estimated model cost for the 120-request benchmark | **~$0.07** |
 
-The public deployment preserves the final hybrid retrieval configuration:
+The estimate uses GPT-4.1 mini Standard pricing of $0.40 per million input
+tokens and $1.60 per million output tokens, as listed in the
+[OpenAI model documentation](https://developers.openai.com/api/docs/models/gpt-4.1-mini).
+Input size is based on representative recorded telemetry, while the output
+average comes from the final 120-request benchmark. These are estimated
+generation costs rather than an exported billing total and exclude hosting or
+infrastructure charges.
+
+## Business Value
+
+- Helps legal, procurement, and compliance teams locate important contract
+  language without manually scanning entire agreements.
+- Presents cited evidence for review instead of returning unsupported model
+  conclusions.
+- Surfaces assignment restrictions, audit rights, liability limits, license
+  grants, and termination rights through natural-language questions.
+- Preserves contract-level distinctions when agreements contain different
+  terms, exceptions, or missing information.
+- Saves past conversations automatically so users can return to earlier
+  contract reviews.
+
+## Core Capabilities
+
+- Citation-grounded answers with expandable source evidence.
+- Hybrid dense and lexical retrieval.
+- Adaptive cross-encoder reranking.
+- Deterministic follow-up contextualization.
+- Supported-topic routing and safe abstention.
+- Persistent chat history with open, delete, and new-chat controls.
+- Per-query latency telemetry and user feedback.
+- FastAPI backend and Streamlit chat interface.
+- Incremental indexing that skips unchanged contract clauses.
+- Repeatable retrieval, answer-quality, and performance evaluations.
+
+## How It Works
 
 ```text
-BGE dense retrieval (6 candidates)
-  + BM25 retrieval (6 candidates)
-  -> reciprocal-rank fusion, k=60
-  -> deduplicate by contract
-  -> adaptive top-3 BGE reranking
-  -> up to 5 cited evidence results
+CUAD contracts
+      |
+      v
+Clause extraction and preparation
+      |
+      v
+Sentence Transformer embeddings
+      |
+      v
+Qdrant dense search + BM25 lexical search
+      |
+      v
+Reciprocal-rank fusion
+      |
+      v
+Contract deduplication
+      |
+      v
+Adaptive top-3 cross-encoder reranking
+      |
+      v
+Grounded answer generation with citations
 ```
 
-Abuse controls include Turnstile, per-IP minute and daily limits, a global
-daily AI budget, concurrency leases, strict request sizes, and server-only API
-keys. A free `*.workers.dev` address is sufficient; a custom domain is
-optional.
+The current retrieval configuration is:
 
-## Run Commands
-
-Start the local Qdrant server:
-
-```powershell
-docker compose up -d qdrant
+```text
+BGE dense retrieval: 6 candidates
+BM25 lexical retrieval: 6 candidates
+Fusion: reciprocal-rank fusion, k=60
+Deduplication: one leading passage per contract
+Reranking: adaptive, top 3 candidates
+Returned evidence: up to 5 passages
 ```
 
-Use the project conda environment if you are working in this existing workspace:
+## Technology Stack
 
-```powershell
-.\.conda-clauselens\python.exe scripts\prepare_cuad_subset.py
-.\.conda-clauselens\python.exe scripts\index_qdrant.py
-```
+| Layer | Technology |
+| --- | --- |
+| Dataset | CUAD |
+| Embeddings | BAAI/bge-small-en-v1.5 |
+| Vector database | Qdrant |
+| Lexical retrieval | In-memory BM25 |
+| Reranker | cross-encoder/ms-marco-MiniLM-L-6-v2 |
+| Answer model | OpenAI GPT-4.1 mini |
+| API | FastAPI |
+| Local interface | Streamlit |
+| Public deployment | Cloudflare Workers and React |
+| Persistence | SQLite and JSONL telemetry |
+| Testing | pytest |
 
-The application defaults to `QDRANT_MODE=server` for stable access and
-benchmarking. Set `QDRANT_MODE=embedded` to use `data/qdrant_local` for simple
-single-process development; embedded storage cannot be opened concurrently by
-the API and evaluation commands.
+## Supported Contract Topics
 
-Indexing stores a SHA-256 content hash and embedding model name in each Qdrant
-payload. Subsequent runs skip unchanged records, update metadata without
-re-embedding, and embed duplicate clause text only once per run. Use
-`--recreate` only when you intentionally want to rebuild the collection.
+ClauseLens currently supports five clause categories:
 
-### Incremental Embedding With Content Hashes
+1. Assignment restrictions
+2. Liability caps
+3. License grants
+4. Audit rights
+5. Termination for convenience
 
-Each clause is assigned a SHA-256 hash based on its text. Before embedding, the
-indexer compares this hash and the embedding model name with the values already
-stored in Qdrant. New or changed clauses are embedded, unchanged clauses are
-skipped, and metadata-only changes are updated without rebuilding the vector.
-Identical clause text is embedded once per indexing run and reused.
+Questions outside these categories are rejected safely instead of being
+answered using unrelated evidence.
 
-Benefits:
+## Dataset Snapshot
 
-- Faster indexing after the initial run.
-- Lower CPU, GPU, and memory usage.
-- No unnecessary embedding of unchanged clauses.
-- Automatic re-embedding when clause text or the embedding model changes.
-- Safe metadata updates without recomputing vectors.
+The current evaluated subset contains:
 
-Create `.env` from the example configuration when setting up a new checkout:
+| Item | Count |
+| --- | ---: |
+| Contracts | 30 |
+| Clause evidence records | 463 |
+| Supported clause categories | 5 |
+
+| Clause category | Records |
+| --- | ---: |
+| Anti-Assignment | 71 |
+| Audit Rights | 165 |
+| Cap On Liability | 90 |
+| License Grant | 116 |
+| Termination For Convenience | 21 |
+
+CUAD contains approximately 500 commercial contracts and 41 clause
+categories. ClauseLens deliberately starts with a smaller evaluated scope
+rather than claiming broad coverage without sufficient testing.
+
+## Quick Start
+
+### 1. Create the environment file
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-The default chat configuration is:
+Configure the answer model:
 
 ```text
 OPENAI_API_KEY=...
@@ -126,301 +203,97 @@ OPENAI_SERVICE_TIER=standard
 MODEL_WARMUP_ENABLED=true
 ```
 
-The main application uses OpenAI directly. Ollama client settings remain
-available for local development utilities:
-
-```text
-OLLAMA_BASE_URL=http://localhost:11434/v1
-OLLAMA_MODEL=llama3.2:latest
-```
-
-Run the API:
-
-```powershell
-.\.conda-clauselens\python.exe -m uvicorn app.api:app --reload
-```
-
-Open:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-Run the Streamlit demo:
-
-```powershell
-.\.conda-clauselens\python.exe -m streamlit run app\streamlit_app.py
-```
-
-Keep the API running while using Streamlit. The UI sends chat requests to `http://127.0.0.1:8000` so Qdrant is opened by only one backend process.
-
-Run retrieval evaluation:
-
-```powershell
-.\.conda-clauselens\python.exe evaluation\eval.py --top-k 5 --no-rerank
-.\.conda-clauselens\python.exe evaluation\eval.py --top-k 5 --rerank --candidate-limit 20
-.\.conda-clauselens\python.exe evaluation\eval.py --top-k 5 --rerank-mode auto
-```
-
-Save evaluation output for the Streamlit sidebar:
-
-```powershell
-.\.conda-clauselens\python.exe evaluation\eval.py --top-k 5 --rerank-mode auto --output data\processed\eval_results.json
-```
-
-Run the chat latency benchmark:
-
-```powershell
-.\.conda-clauselens\python.exe evaluation\chat_benchmark.py --qdrant-mode server --repeats 3 --output data\processed\chat_latency_benchmark.json
-```
-
-Run the 120-turn latency and deterministic-quality acceptance workload:
-
-```powershell
-.\.conda-clauselens\python.exe evaluation\performance_benchmark.py --repeats 10 --candidate-limit 3 --output data\processed\performance_hybrid_final_120.json
-```
-
-Screen the pinned model snapshots on Standard and Priority processing:
-
-```powershell
-.\.conda-clauselens\python.exe evaluation\performance_benchmark.py --matrix --repeats 3 --output data\processed\performance_matrix.json
-```
-
-The matrix intentionally incurs API usage. It does not change the live model
-automatically; select a winner only after reviewing both latency and
-deterministic quality results.
-
-Run generated-answer grounding evaluation:
-
-```powershell
-.\.conda-clauselens\python.exe evaluation\answer_eval.py
-.\.conda-clauselens\python.exe evaluation\answer_eval.py --judge
-```
-
-The first command runs deterministic route, abstention, citation, required
-concept, and forbidden-claim checks. `--judge` additionally uses
-`ANSWER_EVAL_MODEL` (default `gpt-4.1-mini`) to judge claim support, source
-attribution, uncertainty handling, and directness. The judge is intentionally
-not part of normal pytest runs because it requires an API key and incurs model
-cost. Stop the local API before running evaluations against embedded Qdrant,
-because the local storage directory permits only one client process.
-
-Benchmark output includes:
-
-- `wall_clock_latency_ms`: end-to-end time from request start to final response.
-- `first_token_latency_ms`: time until the first streamed token appears.
-- `contextualization_latency_ms`, `embedding_latency_ms`,
-  `vector_search_latency_ms`,
-  `reranker_loading_latency_ms`, `reranking_latency_ms`, and
-  `answer_latency_ms`: the stage breakdown.
-
-Use the comparison mode to tell whether the slowdown is mostly reranking,
-hosted answer generation, or local retrieval.
-
-Chat uses hybrid retrieval by default. Dense Qdrant results and BM25 results
-are combined with reciprocal-rank fusion and deduplicated by contract.
-Adaptive reranking skips the cross-encoder when the dense and lexical top
-ranks agree, and otherwise reranks the top three candidates. The Streamlit
-control can force reranking off or always on.
-
-First-turn chat questions go directly to retrieval. Follow-up questions are
-contextualized deterministically from the previous user question, avoiding a
-second LLM request.
-
-The API warms the embedding model and reranker before reporting ready. Check
-`/health` and wait for `"ready": true` before opening the demo.
-
-Each completed Streamlit query appends local telemetry to
-`data/processed/query_metrics.jsonl`. The sidebar updates query count, latency,
-deterministic citation/evidence checks, and explicit helpful/not-helpful
-feedback. These live checks are not labeled accuracy. Retrieval accuracy still
-comes from the repeatable questions in `evaluation/tests.jsonl`.
-
-Completed conversations are also saved automatically to
-`data/processed/chat_history.db`. Use the collapsible Streamlit sidebar to start
-a new chat, reopen a previous conversation, or delete saved history. Reopening
-a chat restores its messages and retrieval controls.
-
-The chat layer also resolves plain-English questions to one of the five starter
-clause types before retrieval. This improves paraphrase handling and prevents
-unsupported topics, such as governing law or automatic renewal, from being
-answered with unrelated evidence.
-
-Run tests:
-
-```powershell
-.\.conda-clauselens\python.exe -m pytest
-.\.conda-clauselens\python.exe -m ruff check .
-```
-
-For a fresh environment, install dependencies first:
+### 2. Install dependencies
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
 
-## Screenshots
+The commands below use the existing project environment:
 
-Add screenshots here after capturing the local demo.
-
-### Streamlit Chat Demo
-
-### API Docs
-
-### Evaluation Summary
-
-## Evaluation Insights
-
-### Latest End-to-End Performance
-
-The final benchmark used Docker Qdrant, hybrid dense and BM25 retrieval,
-adaptive top-three reranking, GPT-4.1 mini Standard, and 120 sequential
-requests:
-
-| Metric | Final result |
-| --- | ---: |
-| P50 total latency | 1.69 s |
-| P95 total latency | 2.43 s |
-| P99 total latency | 5.05 s |
-| P95 first-token latency | 1.22 s |
-| Deterministic answer accuracy | 100% |
-| Citation validity | 100% |
-| Answer-mode consistency | 100% |
-| Critical failures | 0 |
-
-This meets the practical P95 target of at most 2.5 seconds while preserving
-all answer-quality checks. It does not meet the stricter experimental goals of
-P95 total below 2.0 seconds or P95 first-token latency below 700 ms.
-
-These are portfolio benchmark results from a curated sequential workload, not
-production SLA claims. See
-[`docs/performance_results_2026-06-22.md`](docs/performance_results_2026-06-22.md)
-for methodology and claim boundaries.
-
-### Retrieval Quality
-
-The passage-level evaluation covers plain-English questions across the five
-supported clause types and uses the same routing and retrieval path as the
-application.
-
-| Metric | Final result |
-| --- | ---: |
-| Cases passed | 11/11 |
-| Recall@5 | 1.000 |
-| Context precision | 0.982 |
-| MRR | 1.000 |
-| nDCG | 0.998 |
-| P95 retrieval latency | 68.2 ms |
-| P95 reranking latency | 124.6 ms |
-
-The evaluator scores relevant evidence passages rather than treating every
-passage with the expected clause label as equally relevant.
-
-## Dataset Snapshot
-
-The current starter subset contains:
-
-```text
-Documents: 30
-Clause evidence records: 463
+```powershell
+.\.conda-clauselens\python.exe
 ```
 
-Clause evidence counts:
+### 3. Start Qdrant
 
-```text
-Anti-Assignment: 71
-Audit Rights: 165
-Cap On Liability: 90
-License Grant: 116
-Termination For Convenience: 21
+```powershell
+docker compose up -d qdrant
 ```
 
-### Why The Starter Scope Is Limited
+Server mode is recommended because the API and evaluation tools can share one
+Qdrant service. Embedded mode is available for single-process development but
+cannot be opened by multiple processes simultaneously.
 
-ClauseLens intentionally starts with five clause types and 30 contracts so the
-full ingestion, retrieval, reranking, citation, and evaluation pipeline can be
-tested before expanding coverage. The selected contracts contain the most
-evidence for the supported clause types.
+### 4. Prepare and index CUAD
 
-CUAD contains roughly 500 contracts and 41 clause categories. The next planned
-step is to expand to 10-15 well-tested clause types across more contracts,
-rather than claim broad coverage without sufficient evaluation.
-
-Expected CUAD files:
-
-```text
-data/cuad/CUAD_v1/master_clauses.csv
-data/cuad/CUAD_v1/CUAD_v1.json
-data/cuad/CUAD_v1/full_contract_txt/Part_I
-data/cuad/CUAD_v1/full_contract_txt/Part_II
+```powershell
+.\.conda-clauselens\python.exe scripts\prepare_cuad_subset.py
+.\.conda-clauselens\python.exe scripts\index_qdrant.py
 ```
 
-Raw CUAD data and local Qdrant storage are ignored by Git because they are large local artifacts.
+The indexer stores a SHA-256 content hash and embedding model name with every
+record. Later runs:
 
-## Architecture
+- Skip unchanged records.
+- Re-embed changed clauses.
+- Update metadata without regenerating vectors.
+- Embed duplicate clause text only once per indexing run.
 
-```text
-CUAD CSV + TXT contracts
-        |
-        v
-scripts/prepare_cuad_subset.py
-        |
-        v
-data/processed/starter_clause_evidence.jsonl
-        |
-        v
-scripts/index_qdrant.py
-        |
-        v
-SentenceTransformer embeddings -> Qdrant
-        |
-        v
-Qdrant dense retrieval + BM25 lexical retrieval
-        |
-        v
-reciprocal-rank fusion -> contract deduplication -> adaptive reranking
-        |
-        v
-app/rag.py shared retrieval helpers
-        |
-        +--> scripts/search_qdrant.py
-        +--> app/api.py
-        +--> app/streamlit_app.py
-        +--> evaluation/eval.py
-```
+Use `--recreate` only when intentionally rebuilding the collection.
 
-## Project Structure
-
-```text
-app/
-  api.py                  FastAPI retrieval service
-  streamlit_app.py        local demo UI
-  rag.py                  shared Qdrant and embedding helpers
-  cuad.py                 CUAD data preparation helpers
-
-scripts/
-  prepare_cuad_subset.py  creates starter JSONL evidence records
-  index_qdrant.py         embeds and indexes records into Qdrant
-  search_qdrant.py        searches indexed evidence from the terminal
-
-evaluation/
-  cases.py                loads retrieval evaluation cases
-  eval.py                 runs retrieval metrics against Qdrant
-  tests.jsonl             retrieval test cases
-
-tests/                    unit tests for data prep, retrieval, eval, and API
-docs/                     setup notes, dataset notes, developer notes, plan
-```
-
-## API Example
-
-Start the API:
+### 5. Run the API
 
 ```powershell
 .\.conda-clauselens\python.exe -m uvicorn app.api:app --reload
 ```
 
-Search:
+API documentation:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Check `/health` and wait for `"ready": true`. Startup warmup loads the
+embedding model and reranker before the application begins accepting normal
+traffic.
+
+### 6. Run the Streamlit interface
+
+```powershell
+.\.conda-clauselens\python.exe -m streamlit run app\streamlit_app.py
+```
+
+Keep the API running while using Streamlit. The interface sends requests to:
+
+```text
+http://127.0.0.1:8000
+```
+
+## Application Surfaces
+
+### Streamlit Chat
+
+- Collapsible chat-history sidebar.
+- Automatic conversation persistence.
+- New, reopen, and delete chat controls.
+- Clause-type and result-limit controls.
+- Adaptive, disabled, or forced reranking.
+- Streamed answers and stage indicators.
+- Expandable evidence and latency details.
+- Helpful and not-helpful feedback.
+
+### FastAPI
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /health` | Readiness and model configuration |
+| `GET /clause-types` | Supported clause categories |
+| `POST /search` | Clause evidence retrieval |
+| `POST /chat` | Grounded non-streaming answer |
+| `POST /chat/stream` | Grounded streaming answer |
+
+Example search:
 
 ```powershell
 curl -X POST http://localhost:8000/search `
@@ -428,69 +301,191 @@ curl -X POST http://localhost:8000/search `
   -d "{\"query\":\"Does the contract restrict assignment?\",\"clause_type\":\"Anti-Assignment\",\"limit\":5}"
 ```
 
-Example response shape:
+### Command-Line Search
 
-```json
-{
-  "query": "Does the contract restrict assignment?",
-  "clause_type": "Anti-Assignment",
-  "limit": 5,
-  "result_count": 1,
-  "results": [
-    {
-      "score": 0.87,
-      "clause_type": "Anti-Assignment",
-      "source_pdf": "Example.pdf",
-      "source_txt": "data/cuad/CUAD_v1/full_contract_txt/Part_I/Example.txt",
-      "document_id": "Example",
-      "answer": "Yes",
-      "text": "This Agreement may not be assigned without consent..."
-    }
-  ]
-}
+```powershell
+.\.conda-clauselens\python.exe scripts\search_qdrant.py "Does the contract restrict assignment?"
 ```
 
-## Tests And Quality Checks
+## Evaluation
 
-Current tests cover:
+### Retrieval Quality
 
-- CUAD filename matching and evidence parsing.
-- starter-record selection.
-- retrieval query validation and Qdrant call shape.
-- retrieval evaluation scoring and export.
-- FastAPI health, clause-type, search, and validation endpoints.
+```powershell
+.\.conda-clauselens\python.exe evaluation\eval.py `
+  --qdrant-mode server `
+  --top-k 5 `
+  --rerank-mode auto `
+  --candidate-limit 3 `
+  --output data\processed\eval_hybrid_adaptive.json
+```
 
-Verification commands:
+The evaluator uses the production clause router and scores passage relevance,
+not only clause-category matches.
+
+### Answer Grounding
+
+Run deterministic route, abstention, citation, required-concept, and
+overclaim checks:
+
+```powershell
+.\.conda-clauselens\python.exe evaluation\answer_eval.py
+```
+
+Add an optional model judge for claim support, attribution, uncertainty, and
+directness:
+
+```powershell
+.\.conda-clauselens\python.exe evaluation\answer_eval.py --judge
+```
+
+The model judge incurs API usage and is intentionally excluded from normal
+unit tests.
+
+### End-to-End Performance
+
+```powershell
+.\.conda-clauselens\python.exe evaluation\performance_benchmark.py `
+  --model gpt-4.1-mini-2025-04-14 `
+  --repeats 10 `
+  --candidate-limit 3 `
+  --output data\processed\performance_hybrid_final_120.json
+```
+
+This runs 120 sequential answer-quality and latency requests.
+
+### Model and Service-Tier Comparison
+
+```powershell
+.\.conda-clauselens\python.exe evaluation\performance_benchmark.py `
+  --matrix `
+  --repeats 3 `
+  --output data\processed\performance_matrix.json
+```
+
+This benchmark incurs hosted-model usage and does not automatically change the
+live model.
+
+## Telemetry and Persistence
+
+Completed Streamlit queries are recorded in:
+
+```text
+data/processed/query_metrics.jsonl
+```
+
+Recorded data includes stage latency, model metadata, evidence IDs, citation
+checks, routing consistency, and explicit user feedback.
+
+Chat history is stored in:
+
+```text
+data/processed/chat_history.db
+```
+
+Live telemetry checks are operational signals, not labeled accuracy metrics.
+Accuracy claims come from the repeatable offline evaluations.
+
+## Public Deployment
+
+The deployable application is under
+[cloudflare/](cloudflare/README.md). It uses a React interface, Cloudflare
+Worker streaming API, and a committed static retrieval index generated from
+the same 463 vectors validated by the Python benchmark.
+
+Deployment protections include:
+
+- Turnstile verification.
+- Per-IP minute and daily limits.
+- Global daily AI budget.
+- Concurrency leases.
+- Strict request-size limits.
+- Server-only API keys.
+
+A free `*.workers.dev` address is sufficient. A custom domain is optional.
+
+## Project Structure
+
+```text
+app/
+  api.py                   FastAPI service
+  chat.py                  chat routing and grounded generation
+  chat_history.py          SQLite conversation persistence
+  cuad.py                  CUAD preparation helpers
+  rag.py                   hybrid retrieval and reranking
+  streamlit_app.py         local chat interface
+  telemetry.py             query metrics and feedback
+
+evaluation/
+  answer_eval.py           generated-answer evaluation
+  answer_tests.jsonl       answer-quality cases
+  chat_benchmark.py        stage-level latency benchmark
+  eval.py                  passage-level retrieval evaluation
+  performance_benchmark.py end-to-end acceptance workload
+  tests.jsonl              retrieval cases
+
+scripts/
+  prepare_cuad_subset.py   prepares clause evidence
+  index_qdrant.py          incrementally indexes Qdrant
+  search_qdrant.py         terminal retrieval utility
+
+tests/                     unit and integration tests
+docs/                      requirements, experiments, and results
+```
+
+## Testing
 
 ```powershell
 .\.conda-clauselens\python.exe -m pytest
 .\.conda-clauselens\python.exe -m ruff check .
-.\.conda-clauselens\python.exe -m py_compile app\api.py app\cuad.py app\rag.py app\streamlit_app.py scripts\prepare_cuad_subset.py scripts\index_qdrant.py scripts\search_qdrant.py evaluation\cases.py evaluation\eval.py
 ```
+
+The current suite contains 72 passing tests covering:
+
+- CUAD parsing and record preparation.
+- Incremental indexing.
+- Dense, lexical, fused, and reranked retrieval.
+- Contract-level deduplication.
+- Clause routing and follow-up contextualization.
+- Citation and grounding behavior.
+- API endpoints and validation.
+- Chat persistence and telemetry.
+- Retrieval and performance evaluation logic.
+
+## Current Limitations
+
+- Only five clause categories are supported.
+- The benchmark uses a curated, sequential workload rather than concurrent
+  production traffic.
+- The 11-case retrieval suite is useful but still small.
+- The system assists contract review and does not replace legal judgment.
+- Hosted-model latency prevents the stricter 2.0-second P95 and 700 ms
+  first-token targets from being met consistently.
+
+## Documentation
+
+- [Product requirements](docs/prd.md)
+- [Architecture and operating notes](docs/notes.md)
+- [Experiment history](docs/experiments.md)
+- [Latest performance report](docs/performance_results_2026-06-22.md)
+- [Evaluation questions](docs/questions.md)
 
 ## Resume Summary
 
-Built ClauseLens, a citation-grounded RAG chatbot for legal, procurement, and
-compliance teams using real-world CUAD contracts to accelerate contract review
-and support risk-informed decisions. Achieved 100% Recall@5, 98.2% context
-precision, 100% benchmark accuracy, and 2.43-second P95 response latency.
+- Built a hybrid contract RAG pipeline using Qdrant dense retrieval, BM25,
+  reciprocal-rank fusion, and adaptive cross-encoder reranking over 463 clause
+  passages from 30 CUAD contracts across five clause types.
+- Achieved 100% Recall@5 and 98.2% context precision on an 11-case retrieval
+  evaluation, plus 100% deterministic answer accuracy and citation validity
+  with 2.43-second P95 latency across 120 sequential GPT-4.1 mini requests.
+- Kept estimated generation cost near $0.00060 per answer, or approximately
+  $0.60 per 1,000 answers, by using local retrieval and reranking with compact
+  grounded prompts.
 
-## Current Status
+## Next Steps
 
-Implemented:
-
-- CUAD evidence extraction and starter JSONL generation.
-- embedded-local and server Qdrant indexing.
-- reusable retrieval helpers.
-- CLI search.
-- FastAPI search and chat services.
-- Streamlit chat UI with recent-turn context.
-- grounded LLM answer generation with citations.
-- retrieval evaluation CLI and JSONL test cases.
-- unit tests for core behavior and API endpoints.
-
-Next:
-
-- add screenshots to this README.
-- add full-contract chunking with character spans.
-- add citation correctness and answer faithfulness evaluation.
+- Expand coverage to 10 to 15 thoroughly evaluated clause categories.
+- Add full-contract chunking with character-level source spans.
+- Increase the passage-level and adversarial evaluation sets.
+- Add concurrent-user load testing.
+- Evaluate a deterministic fast path for frequent contract questions.
