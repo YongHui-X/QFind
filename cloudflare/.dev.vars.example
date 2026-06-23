@@ -1,0 +1,7 @@
+OPENAI_API_KEY=
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+IP_HASH_SECRET=replace-with-at-least-32-random-characters
+BENCHMARK_TOKEN=replace-with-a-separate-long-random-token
+OPENAI_MODEL=gpt-4.1-mini-2025-04-14
+OPENAI_SERVICE_TIER=standard
+ALLOWED_ORIGIN=http://localhost:5173

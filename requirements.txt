@@ -3,6 +3,8 @@ sentence-transformers
 pandas
 pydantic
 python-dotenv
+openai
+httpx
 tqdm
 rich
 fastapi
@@ -10,4 +12,3 @@ uvicorn[standard]
 streamlit
 pytest
 ruff
-

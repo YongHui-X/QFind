@@ -41,11 +41,16 @@ def test_evaluate_case_scores_expected_clause_and_keywords() -> None:
 
     assert result.expected_clause_type_rank == 2
     assert result.clause_type_mrr == 0.5
+    assert result.first_relevant_rank == 2
+    assert result.mrr == 0.5
+    assert result.recall_at_k == 1.0
+    assert result.context_precision == 0.5
     assert result.top1_clause_hit is False
     assert result.topk_clause_hit is True
     assert result.keywords_found == 2
     assert result.keyword_coverage == 1.0
     assert result.passed is False
+    assert result.reranking_enabled is False
 
 
 def test_write_results_exports_json(tmp_path) -> None:
@@ -76,3 +81,4 @@ def test_write_results_exports_json(tmp_path) -> None:
     data = output.read_text(encoding="utf-8")
     assert '"question": "What audit rights does the customer have?"' in data
     assert '"top1_clause_hit": true' in data
+    assert '"reranking_latency_ms": 0.0' in data

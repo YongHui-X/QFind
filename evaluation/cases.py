@@ -18,6 +18,7 @@ class RetrievalTestCase(BaseModel):
     keywords: list[str] = Field(
         description="Keywords or phrases expected in the retrieved evidence"
     )
+    expected_record_ids: list[str] = Field(default_factory=list)
     category: str = Field(description="Evaluation category")
 
 

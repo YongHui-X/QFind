@@ -6,5 +6,6 @@
 {"question": "Can the customer inspect or audit records?", "expected_clause_type": "Audit Rights", "keywords": ["audit", "inspect"], "category": "clause_type"}
 {"question": "What license rights are granted under the agreement?", "expected_clause_type": "License Grant", "keywords": ["license", "right"], "category": "clause_type"}
 {"question": "Does the agreement grant a right to use intellectual property?", "expected_clause_type": "License Grant", "keywords": ["license", "use"], "category": "clause_type"}
+{"question": "What is the specific provision in the contract that defines the rights granted for intellectual property use?", "expected_clause_type": "License Grant", "keywords": ["license", "use"], "category": "regression"}
 {"question": "Can either party terminate the agreement for convenience?", "expected_clause_type": "Termination For Convenience", "keywords": ["terminate", "convenience"], "category": "clause_type"}
 {"question": "Can the agreement be terminated without cause after notice?", "expected_clause_type": "Termination For Convenience", "keywords": ["terminate", "notice"], "category": "clause_type"}
