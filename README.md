@@ -1,5 +1,7 @@
 # QFind
 
+[![CI](https://github.com/YongHui-X/ClauseLens/actions/workflows/ci.yml/badge.svg)](https://github.com/YongHui-X/ClauseLens/actions/workflows/ci.yml)
+
 **A RAG chatbot for asking contract questions and checking the source evidence.**
 
 QFind helps legal, procurement, and compliance reviewers ask plain-English
@@ -14,7 +16,8 @@ precision, 1.000 MRR, 100% deterministic answer accuracy, and 100% citation
 validity on the final benchmark.
 
 **Live production demo:** [qfind-736872970476.asia-southeast1.run.app](https://qfind-736872970476.asia-southeast1.run.app/)  
-This is the live QFind RAG chatbot deployed on Google Cloud Run.
+
+This is the live QFind RAG chatbot deployed on Google Cloud Run. Note that there is a 20 seconds warm up time when first loaded due to the nature of Google Cloud Run having to do a cold start, a trade off for hosting free on their platform.
 
 This is a portfolio research prototype. It is not a legal advice tool.
 
@@ -73,6 +76,7 @@ than answered from unrelated evidence.
 - [Quick Start](#quick-start)
 - [Application Surfaces](#application-surfaces)
 - [Evaluation](#evaluation)
+- [CI/CD](#cicd)
 - [Deployment](#public-deployment)
 - [Project Structure](#project-structure)
 
@@ -520,6 +524,13 @@ overclaim checks:
 python evaluation\answer_eval.py
 ```
 
+CI uses the offline deterministic mode so pull requests do not spend OpenAI
+credits:
+
+```powershell
+python evaluation\answer_eval.py --offline
+```
+
 Add an optional model judge for claim support, attribution, uncertainty, and
 directness:
 
@@ -553,6 +564,52 @@ python evaluation\performance_benchmark.py `
 
 This benchmark incurs hosted-model usage and does not automatically change the
 live model.
+
+## CI/CD
+
+QFind uses GitHub Actions with manual deployment gates:
+
+- `CI` runs on pull requests, pushes to `main`, and manual dispatch. It installs
+  Python dependencies, runs `pytest` and `ruff`, checks and builds the React
+  frontend, builds the Cloud Run Docker image, runs warning-only dependency
+  audits, and fails only on critical container vulnerabilities.
+- `RAG Quality` runs manually, weekly, and on RAG-related pull request paths. It
+  starts Qdrant, prepares the CUAD subset, indexes the collection, runs
+  retrieval evaluation, runs offline deterministic answer checks, and uploads
+  JSON reports as artifacts.
+- `Deploy to Cloud Run` is manual only. It first checks that `CI` passed for the
+  selected commit, then builds and pushes the image to Artifact Registry,
+  deploys Cloud Run with cost controls, and smoke-tests `/health` plus the root
+  URL.
+
+Required GitHub repository variables:
+
+```text
+GCP_PROJECT_ID
+GCP_REGION=asia-southeast1
+CLOUD_RUN_SERVICE=qfind
+QDRANT_CLOUD_URL
+OPENAI_MODEL=gpt-4.1-mini-2025-04-14
+```
+
+Required GitHub repository secrets:
+
+```text
+GCP_WORKLOAD_IDENTITY_PROVIDER
+GCP_SERVICE_ACCOUNT
+```
+
+Runtime secrets remain in Google Secret Manager:
+
+```text
+OPENAI_API_KEY
+QDRANT_API_KEY
+SESSION_SIGNING_SECRET
+```
+
+Hosted-model judging and full performance benchmarks are not part of default PR
+CI because they spend API credits and measure external hosted-model latency
+variance. Run them manually when validating release claims.
 
 ## Telemetry and Persistence
 

@@ -59,7 +59,33 @@ browser-only session cookie issued by `/api/session`.
 
 ## 4. Deploy to Cloud Run
 
-Use `min instances = 0` to keep cost near zero for occasional demo traffic.
+The preferred production-style path is the manual GitHub Actions workflow
+`Deploy to Cloud Run`. It requires the `CI` workflow to have passed for the
+selected commit, pushes the Docker image to Artifact Registry, deploys Cloud
+Run, and checks `/health` plus the root URL.
+
+Configure these GitHub repository variables:
+
+```text
+GCP_PROJECT_ID
+GCP_REGION=asia-southeast1
+CLOUD_RUN_SERVICE=qfind
+QDRANT_CLOUD_URL
+OPENAI_MODEL=gpt-4.1-mini-2025-04-14
+```
+
+Configure these GitHub repository secrets for Workload Identity Federation:
+
+```text
+GCP_WORKLOAD_IDENTITY_PROVIDER
+GCP_SERVICE_ACCOUNT
+```
+
+The workflow assumes an Artifact Registry Docker repository named the same as
+`CLOUD_RUN_SERVICE`, for example `qfind`.
+
+For local/manual deployment, use `min instances = 0` to keep cost near zero for
+occasional demo traffic.
 
 ```powershell
 gcloud run deploy qfind `

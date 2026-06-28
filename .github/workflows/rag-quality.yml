@@ -1,0 +1,103 @@
+name: RAG Quality
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 18 * * 0"
+  pull_request:
+    paths:
+      - "app/**"
+      - "scripts/**"
+      - "evaluation/**"
+      - "tests/**"
+      - "data/processed/**"
+      - "requirements.txt"
+      - "pyproject.toml"
+
+permissions:
+  contents: read
+
+jobs:
+  rag-quality:
+    name: Retrieval and answer gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.14.1
+        ports:
+          - 6333:6333
+
+    env:
+      QDRANT_MODE: server
+      QDRANT_URL: http://localhost:6333
+      QDRANT_LOCAL_URL: http://localhost:6333
+      MODEL_WARMUP_ENABLED: "false"
+      RERANKING_ENABLED: "false"
+      OPENAI_MODEL: gpt-4.1-mini-2025-04-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Wait for Qdrant
+        run: |
+          python - <<'PY'
+          import time
+          import urllib.request
+
+          for _ in range(30):
+              try:
+                  with urllib.request.urlopen("http://localhost:6333/", timeout=2) as response:
+                      if response.status == 200:
+                          raise SystemExit(0)
+              except Exception:
+                  time.sleep(2)
+          raise SystemExit("Qdrant did not become ready")
+          PY
+
+      - name: Prepare CUAD starter subset
+        run: python scripts/prepare_cuad_subset.py
+
+      - name: Index Qdrant collection
+        run: python scripts/index_qdrant.py --recreate
+
+      - name: Run retrieval evaluation
+        run: |
+          python evaluation/eval.py \
+            --qdrant-mode server \
+            --qdrant-url http://localhost:6333 \
+            --top-k 5 \
+            --rerank-mode off \
+            --candidate-limit 20 \
+            --output data/processed/eval_ci.json
+
+      - name: Run deterministic answer evaluation
+        run: |
+          python evaluation/answer_eval.py \
+            --offline \
+            --qdrant-mode server \
+            --qdrant-url http://localhost:6333 \
+            --rerank-mode off \
+            --output data/processed/answer_eval_ci.json
+
+      - name: Upload RAG quality reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rag-quality-reports
+          path: |
+            data/processed/eval_ci.json
+            data/processed/answer_eval_ci.json
+            data/processed/starter_summary.json
+          if-no-files-found: warn

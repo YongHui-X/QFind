@@ -19,6 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.chat import ChatMessage, ChatRequest, answer_chat_turn  # noqa: E402
+from app.rag import QDRANT_PATH, QDRANT_URL  # noqa: E402
 from app.telemetry import citation_indexes  # noqa: E402
 from evaluation.answer_cases import (  # noqa: E402
     DEFAULT_ANSWER_TEST_FILE,
@@ -49,6 +50,55 @@ INSUFFICIENT_MARKERS = (
     "cannot determine",
     "insufficient",
 )
+
+
+class OfflineAnswerClient:
+    """Deterministic answer client for CI checks that must not call OpenAI."""
+
+    model = "offline-deterministic"
+
+    def __init__(self, case: AnswerTestCase) -> None:
+        self.case = case
+
+    def complete(
+        self,
+        *,
+        system_prompt: str,
+        messages: list[dict[str, str]],
+        temperature: float = 0.0,
+        max_tokens: int | None = None,
+    ) -> str:
+        concepts = ", ".join(self.case.required_concepts)
+        concept_text = f" about {concepts}" if concepts else ""
+        if self.case.answer_mode == "varies":
+            return (
+                "The retrieved agreements differ. "
+                f"The evidence varies by agreement{concept_text} [1]."
+            )
+        if self.case.answer_mode == "insufficient":
+            return (
+                "The retrieved evidence does not specify enough information"
+                f"{concept_text} [1]."
+            )
+        return f"The retrieved evidence supports the answer{concept_text} [1]."
+
+    def stream_complete(
+        self,
+        *,
+        system_prompt: str,
+        messages: list[dict[str, str]],
+        temperature: float = 0.0,
+        max_tokens: int | None = None,
+    ):
+        yield self.complete(
+            system_prompt=system_prompt,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+    def response_metadata(self) -> dict[str, str | None]:
+        return {"model": self.model}
 
 
 def normalize_legal_concepts(text: str) -> str:
@@ -251,20 +301,27 @@ def run_case(
     engine: Any,
     judge: bool,
     judge_model: str,
+    offline: bool,
 ) -> AnswerEvalResult:
     """Generate and evaluate one answer-quality case."""
 
-    response = answer_chat_turn(
-        engine=engine,
-        request=ChatRequest(
-            messages=[
-                ChatMessage(role=message.role, content=message.content)
-                for message in case.messages
-            ],
-            limit=5,
-            rerank_mode="auto",
-        ),
-    ).model_dump()
+    original_llm = engine.llm
+    if offline:
+        engine.llm = OfflineAnswerClient(case)
+    try:
+        response = answer_chat_turn(
+            engine=engine,
+            request=ChatRequest(
+                messages=[
+                    ChatMessage(role=message.role, content=message.content)
+                    for message in case.messages
+                ],
+                limit=5,
+                rerank_mode="auto",
+            ),
+        ).model_dump()
+    finally:
+        engine.llm = original_llm
     deterministic = evaluate_deterministically(case, response)
     judge_decision = (
         judge_answer(case=case, response=response, model=judge_model)
@@ -339,6 +396,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_PATH)
     parser.add_argument("--judge", action="store_true")
     parser.add_argument(
+        "--qdrant-mode",
+        choices=["server", "embedded"],
+        default="embedded",
+    )
+    parser.add_argument("--qdrant-url", default=QDRANT_URL)
+    parser.add_argument("--qdrant-path", type=Path, default=QDRANT_PATH)
+    parser.add_argument(
+        "--rerank-mode",
+        choices=["off", "auto", "always"],
+        default="auto",
+    )
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="Use deterministic local answer text instead of hosted generation.",
+    )
+    parser.add_argument(
         "--judge-model",
         default=os.getenv("ANSWER_EVAL_MODEL", DEFAULT_JUDGE_MODEL),
     )
@@ -348,13 +422,19 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     cases = load_answer_tests(args.tests)
-    engine = build_engine(rerank_mode="auto")
+    engine = build_engine(
+        rerank_mode=args.rerank_mode,
+        qdrant_mode=args.qdrant_mode,
+        qdrant_url=args.qdrant_url,
+        qdrant_path=args.qdrant_path,
+    )
     results = [
         run_case(
             case=case,
             engine=engine,
             judge=args.judge,
             judge_model=args.judge_model,
+            offline=args.offline,
         )
         for case in cases
     ]
