@@ -89,15 +89,46 @@ jobs:
           with ZipFile("/tmp/CUAD_v1.zip") as archive:
               archive.extractall(target)
 
-          text_root = target / "CUAD_v1" / "full_contract_txt"
-          if text_root.exists():
-              for part_dir in text_root.iterdir():
-                  if not part_dir.is_dir():
+          dataset_root = target / "CUAD_v1"
+          text_root = dataset_root / "full_contract_txt"
+          if not text_root.exists():
+              import csv
+              import json
+
+              with (dataset_root / "master_clauses.csv").open(
+                  "r", encoding="utf-8-sig", newline=""
+              ) as file:
+                  csv_stems = {
+                      Path(row["Filename"]).stem.strip()
+                      for row in csv.DictReader(file)
+                  }
+
+              documents = json.loads(
+                  (dataset_root / "CUAD_v1.json").read_text(encoding="utf-8")
+              )["data"]
+
+              part_i = text_root / "Part_I"
+              part_ii = text_root / "Part_II"
+              part_i.mkdir(parents=True, exist_ok=True)
+              part_ii.mkdir(parents=True, exist_ok=True)
+
+              written = 0
+              for document in documents:
+                  stem = document["title"].strip()
+                  if stem not in csv_stems:
                       continue
-                  normalized_name = part_dir.name.replace(" ", "_")
-                  normalized_path = text_root / normalized_name
-                  if normalized_path != part_dir and not normalized_path.exists():
-                      part_dir.rename(normalized_path)
+                  contexts = [
+                      paragraph.get("context", "")
+                      for paragraph in document.get("paragraphs", [])
+                      if paragraph.get("context")
+                  ]
+                  if contexts:
+                      (part_i / f"{stem}.txt").write_text(
+                          "\n\n".join(contexts),
+                          encoding="utf-8",
+                      )
+                      written += 1
+              print(f"Generated {written} CUAD text files from CUAD_v1.json.")
 
           required_paths = [
               target / "CUAD_v1" / "master_clauses.csv",
