@@ -312,6 +312,11 @@ SESSION_SIGNING_SECRET=replace-with-a-random-local-secret
 
 ### 2. Install dependencies
 
+Use Python 3.11 or 3.12 for the full development environment. Python 3.14 can
+install and run the main application, but skips the optional Ragas dependency
+because one of its transitive packages does not publish Python 3.14 wheels on
+Windows.
+
 ```powershell
 python -m pip install -r requirements.txt
 ```
@@ -553,6 +558,10 @@ hosted-judge benchmark for release validation. It reuses the 12 curated answer
 scenarios, collects the generated answer and retrieved contexts, and scores
 faithfulness, answer relevancy, context precision, and context recall using the
 [Ragas evaluation workflow](https://docs.ragas.io/en/stable/getstarted/evals/):
+
+Run this evaluation from Python 3.11 or 3.12. On Windows with Python 3.14, pip
+may try to build `scikit-network` from source and fail without Microsoft C++
+Build Tools.
 
 ```powershell
 $env:RAGAS_JUDGE_MODEL="gpt-4.1-mini-2025-04-14"
