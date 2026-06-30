@@ -9,6 +9,7 @@ from evaluation.answer_eval import (
     judge_answer,
     normalize_legal_concepts,
     quality_gate,
+    run_case,
 )
 
 
@@ -171,6 +172,48 @@ def test_judge_answer_parses_structured_json() -> None:
 
     assert decision.passed is True
     assert decision.claim_support == 5
+
+
+def test_run_case_uses_configured_rerank_mode(monkeypatch) -> None:
+    captured = {}
+
+    class Response:
+        def model_dump(self):
+            return {
+                "answer": "The retrieved agreements differ on audit rights. [1]",
+                "resolved_clause_type": "Audit Rights",
+                "abstained": False,
+                "results": [{"text": "Audit rights vary."}],
+            }
+
+    def fake_answer_chat_turn(*, engine, request):
+        captured["rerank_mode"] = request.rerank_mode
+        return Response()
+
+    monkeypatch.setattr(
+        "evaluation.answer_eval.answer_chat_turn",
+        fake_answer_chat_turn,
+    )
+    engine = SimpleNamespace(llm=object())
+    case = make_case(
+        case_id="audit-frequency",
+        expected_clause_type="Audit Rights",
+        answer_mode="varies",
+        required_concepts=["audit"],
+        critical=False,
+    )
+
+    result = run_case(
+        case=case,
+        engine=engine,
+        judge=False,
+        judge_model="judge-model",
+        offline=False,
+        rerank_mode="off",
+    )
+
+    assert captured["rerank_mode"] == "off"
+    assert result.passed is True
 
 
 def test_quality_gate_requires_critical_checks_and_ninety_percent_judge() -> None:

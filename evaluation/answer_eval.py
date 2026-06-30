@@ -302,6 +302,7 @@ def run_case(
     judge: bool,
     judge_model: str,
     offline: bool,
+    rerank_mode: str,
 ) -> AnswerEvalResult:
     """Generate and evaluate one answer-quality case."""
 
@@ -317,7 +318,7 @@ def run_case(
                     for message in case.messages
                 ],
                 limit=5,
-                rerank_mode="auto",
+                rerank_mode=rerank_mode,
             ),
         ).model_dump()
     finally:
@@ -435,6 +436,7 @@ def main() -> None:
             judge=args.judge,
             judge_model=args.judge_model,
             offline=args.offline,
+            rerank_mode=args.rerank_mode,
         )
         for case in cases
     ]

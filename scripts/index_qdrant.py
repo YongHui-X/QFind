@@ -230,6 +230,7 @@ def main() -> None:
     print(f"Skipped unchanged: {unchanged}")
     print(f"Metadata-only updates: {metadata_updates}")
     print(f"Collection count: {count}")
+    client.close()
 
 
 if __name__ == "__main__":
