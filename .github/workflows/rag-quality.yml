@@ -81,10 +81,25 @@ jobs:
             -o /tmp/CUAD_v1.zip \
             "https://zenodo.org/api/records/4595826/files/CUAD_v1.zip/content"
           echo "c38f490a984420b8a62600db401fafd5  /tmp/CUAD_v1.zip" | md5sum -c -
-          unzip -q /tmp/CUAD_v1.zip -d data/cuad
-          test -f data/cuad/CUAD_v1/master_clauses.csv
-          test -d data/cuad/CUAD_v1/full_contract_txt/Part_I
-          test -d data/cuad/CUAD_v1/full_contract_txt/Part_II
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          target = Path("data/cuad")
+          with ZipFile("/tmp/CUAD_v1.zip") as archive:
+              archive.extractall(target)
+
+          required_paths = [
+              target / "CUAD_v1" / "master_clauses.csv",
+              target / "CUAD_v1" / "full_contract_txt" / "Part_I",
+              target / "CUAD_v1" / "full_contract_txt" / "Part_II",
+          ]
+          missing = [str(path) for path in required_paths if not path.exists()]
+          if missing:
+              raise SystemExit(f"CUAD extraction missing required paths: {missing}")
+
+          print("CUAD v1 extracted and validated.")
+          PY
 
       - name: Wait for Qdrant
         run: |
