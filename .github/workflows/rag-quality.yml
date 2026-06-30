@@ -8,26 +8,6 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/rag-quality.yml"
-      - "app/**"
-      - "evaluation/**"
-      - "scripts/**"
-      - "requirements.txt"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/rag-quality.yml"
-      - "app/**"
-      - "evaluation/**"
-      - "scripts/**"
-      - "requirements.txt"
-  schedule:
-    - cron: "0 18 * * 0"
 
 permissions:
   contents: read
@@ -71,7 +51,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: data/cuad/CUAD_v1
-          key: cuad-v1-zenodo-c38f490a984420b8a62600db401fafd5
+          key: cuad-v1-json-text-v2-c38f490a984420b8a62600db401fafd5
 
       - name: Download CUAD v1
         if: steps.cache-cuad.outputs.cache-hit != 'true'
@@ -192,7 +172,7 @@ jobs:
             --output data/processed/answer_eval_ci.json
 
       - name: Run Ragas release-quality evaluation
-        if: env.OPENAI_API_KEY != '' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_ragas))
+        if: env.OPENAI_API_KEY != '' && inputs.run_ragas
         env:
           RAGAS_JUDGE_MODEL: gpt-4.1-mini-2025-04-14
         run: |
