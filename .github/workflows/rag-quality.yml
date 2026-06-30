@@ -114,8 +114,17 @@ jobs:
             --rerank-mode off \
             --output data/processed/answer_eval_ci.json
 
+      - name: Show Ragas gate inputs
+        run: |
+          echo "run_ragas input: ${{ github.event.inputs.run_ragas }}"
+          if [ -n "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY configured: true"
+          else
+            echo "OPENAI_API_KEY configured: false"
+          fi
+
       - name: Run Ragas release-quality evaluation
-        if: env.OPENAI_API_KEY != '' && inputs.run_ragas
+        if: env.OPENAI_API_KEY != '' && github.event.inputs.run_ragas == 'true'
         env:
           RAGAS_JUDGE_MODEL: gpt-4.1-mini-2025-04-14
         run: |
