@@ -1,6 +1,9 @@
 name: RAG Quality
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       run_ragas:
@@ -116,7 +119,9 @@ jobs:
 
       - name: Show Ragas gate inputs
         run: |
+          echo "event: ${{ github.event_name }}"
           echo "run_ragas input: ${{ github.event.inputs.run_ragas }}"
+          echo "ragas enabled: ${{ github.event_name == 'push' || github.event.inputs.run_ragas == 'true' }}"
           if [ -n "$OPENAI_API_KEY" ]; then
             echo "OPENAI_API_KEY configured: true"
           else
@@ -124,7 +129,7 @@ jobs:
           fi
 
       - name: Run Ragas release-quality evaluation
-        if: github.event.inputs.run_ragas == 'true'
+        if: ${{ github.event_name == 'push' || github.event.inputs.run_ragas == 'true' }}
         env:
           RAGAS_JUDGE_MODEL: gpt-4.1-mini-2025-04-14
         run: |
