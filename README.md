@@ -9,7 +9,7 @@ relevant contract language, writes a concise answer, and shows the cited evidenc
 used to produce it.
 
 The evaluated version of this RAG chatbot was tested on 463 clause evidence
-records from 30 CUAD contracts. On the 11-case retrieval suite it reached
+records from 30 CUAD contracts. On 11 curated retrieval test questions it reached
 100% Recall@5, 98.2% average context precision, 1.000 MRR, and 0.998 nDCG.
 On the final 120-request answer benchmark, it passed deterministic
 route/citation/concept checks for repeated runs of 12 curated answer cases.
@@ -741,7 +741,8 @@ The current suite covers:
 - Only five clause categories are supported.
 - The benchmark uses a curated, sequential workload rather than concurrent
   production traffic.
-- The 11-case retrieval suite is useful but still small.
+- The retrieval evaluation uses 11 curated test questions, so it is useful but
+  still small.
 - The system assists contract review and does not replace legal judgment.
 - Hosted-model latency prevents the stricter 2.0-second P95 and 700 ms
   first-token targets from being met consistently.

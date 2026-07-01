@@ -128,7 +128,12 @@ def test_run_ragas_scores_passes_openai_client_to_llm_factory(monkeypatch) -> No
         return "embeddings"
 
     class Metric:
-        pass
+        def __init__(self, **kwargs):
+            captured.setdefault("metrics", []).append((self.__class__.__name__, kwargs))
+
+    class RunConfig:
+        def __init__(self, **kwargs):
+            captured["run_config"] = kwargs
 
     ragas_module = types.ModuleType("ragas")
     ragas_module.EvaluationDataset = EvaluationDataset
@@ -137,7 +142,7 @@ def test_run_ragas_scores_passes_openai_client_to_llm_factory(monkeypatch) -> No
     ragas_llms_module = types.ModuleType("ragas.llms")
     ragas_llms_module.llm_factory = llm_factory
 
-    ragas_embeddings_module = types.ModuleType("ragas.embeddings")
+    ragas_embeddings_module = types.ModuleType("ragas.embeddings.base")
     ragas_embeddings_module.embedding_factory = embedding_factory
 
     ragas_metrics_module = types.ModuleType("ragas.metrics")
@@ -145,6 +150,9 @@ def test_run_ragas_scores_passes_openai_client_to_llm_factory(monkeypatch) -> No
     ragas_metrics_module.LLMContextPrecisionWithReference = Metric
     ragas_metrics_module.LLMContextRecall = Metric
     ragas_metrics_module.ResponseRelevancy = Metric
+
+    ragas_run_config_module = types.ModuleType("ragas.run_config")
+    ragas_run_config_module.RunConfig = RunConfig
 
     class OpenAI:
         pass
@@ -154,8 +162,9 @@ def test_run_ragas_scores_passes_openai_client_to_llm_factory(monkeypatch) -> No
 
     monkeypatch.setitem(sys.modules, "ragas", ragas_module)
     monkeypatch.setitem(sys.modules, "ragas.llms", ragas_llms_module)
-    monkeypatch.setitem(sys.modules, "ragas.embeddings", ragas_embeddings_module)
+    monkeypatch.setitem(sys.modules, "ragas.embeddings.base", ragas_embeddings_module)
     monkeypatch.setitem(sys.modules, "ragas.metrics", ragas_metrics_module)
+    monkeypatch.setitem(sys.modules, "ragas.run_config", ragas_run_config_module)
     monkeypatch.setitem(sys.modules, "openai", openai_module)
 
     scores = run_ragas_scores(
@@ -170,3 +179,11 @@ def test_run_ragas_scores_passes_openai_client_to_llm_factory(monkeypatch) -> No
     assert captured["embedding_provider"] == "text-embedding-3-small"
     assert captured["embedding_interface"] == "legacy"
     assert captured["evaluate"]["embeddings"] == "embeddings"
+    assert captured["evaluate"]["run_config"].__class__ is RunConfig
+    assert captured["run_config"] == {
+        "timeout": 60,
+        "max_retries": 2,
+        "max_wait": 10,
+        "max_workers": 4,
+    }
+    assert ("Metric", {"strictness": 1}) in captured["metrics"]

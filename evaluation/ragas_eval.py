@@ -42,6 +42,11 @@ DEFAULT_THRESHOLDS = {
     "context_recall": 0.80,
 }
 DEFAULT_CRITICAL_FAITHFULNESS_MIN = 0.75
+DEFAULT_RAGAS_TIMEOUT_SECONDS = 60
+DEFAULT_RAGAS_MAX_WORKERS = 4
+DEFAULT_RAGAS_MAX_RETRIES = 2
+DEFAULT_RAGAS_MAX_WAIT_SECONDS = 10
+DEFAULT_RESPONSE_RELEVANCY_STRICTNESS = 1
 
 
 @dataclass(frozen=True)
@@ -229,13 +234,14 @@ def run_ragas_scores(
         install_ragas_vertexai_import_shim()
         from openai import OpenAI
         from ragas import EvaluationDataset, evaluate
-        from ragas.embeddings import embedding_factory
+        from ragas.embeddings.base import embedding_factory
         from ragas.llms import llm_factory
         from ragas.metrics import (
             Faithfulness,
             LLMContextPrecisionWithReference,
             LLMContextRecall,
         )
+        from ragas.run_config import RunConfig
         try:
             from ragas.metrics import ResponseRelevancy
         except ImportError:
@@ -252,16 +258,23 @@ def run_ragas_scores(
         "text-embedding-3-small",
         interface="legacy",
     )
+    run_config = RunConfig(
+        timeout=DEFAULT_RAGAS_TIMEOUT_SECONDS,
+        max_retries=DEFAULT_RAGAS_MAX_RETRIES,
+        max_wait=DEFAULT_RAGAS_MAX_WAIT_SECONDS,
+        max_workers=DEFAULT_RAGAS_MAX_WORKERS,
+    )
     result = evaluate(
         dataset=dataset,
         metrics=[
             Faithfulness(),
-            ResponseRelevancy(),
+            ResponseRelevancy(strictness=DEFAULT_RESPONSE_RELEVANCY_STRICTNESS),
             LLMContextPrecisionWithReference(),
             LLMContextRecall(),
         ],
         llm=llm,
         embeddings=embeddings,
+        run_config=run_config,
         raise_exceptions=True,
     )
     if hasattr(result, "to_pandas"):
