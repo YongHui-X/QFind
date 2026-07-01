@@ -1,9 +1,11 @@
 import json
+import sys
 from pathlib import Path
 
 from evaluation.ragas_cases import load_ragas_cases
 from evaluation.ragas_eval import (
     RagasCollectedCase,
+    install_ragas_vertexai_import_shim,
     ragas_dataset_rows,
     summarize_results,
 )
@@ -85,3 +87,13 @@ def test_summarize_results_reports_threshold_failures_and_json_shape(
     output.write_text(json.dumps(report), encoding="utf-8")
     saved = json.loads(output.read_text(encoding="utf-8"))
     assert saved["thresholds"]["critical_faithfulness_min"] == 0.75
+
+
+def test_install_ragas_vertexai_import_shim_provides_legacy_module(monkeypatch) -> None:
+    module_name = "langchain_community.chat_models.vertexai"
+    monkeypatch.delitem(sys.modules, module_name, raising=False)
+
+    install_ragas_vertexai_import_shim()
+
+    module = sys.modules[module_name]
+    assert hasattr(module, "ChatVertexAI")

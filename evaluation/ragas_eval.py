@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import sys
+import types
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
@@ -189,6 +191,29 @@ def summarize_results(
     }
 
 
+def install_ragas_vertexai_import_shim() -> None:
+    """Provide Ragas' unused legacy VertexAI import path when LangChain lacks it."""
+
+    module_name = "langchain_community.chat_models.vertexai"
+    try:
+        if importlib.util.find_spec(module_name) is not None:
+            return
+    except (ImportError, ModuleNotFoundError, ValueError):
+        pass
+
+    module = types.ModuleType(module_name)
+
+    class ChatVertexAI:  # pragma: no cover - only used if Ragas selects VertexAI.
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            raise ImportError(
+                "ChatVertexAI is not installed. QFind Ragas CI uses OpenAI; "
+                "install langchain-google-vertexai only for VertexAI judges."
+            )
+
+    module.ChatVertexAI = ChatVertexAI
+    sys.modules.setdefault(module_name, module)
+
+
 def run_ragas_scores(
     dataset_rows: list[dict[str, Any]],
     *,
@@ -201,6 +226,7 @@ def run_ragas_scores(
     """
 
     try:
+        install_ragas_vertexai_import_shim()
         from ragas import EvaluationDataset, evaluate
         from ragas.llms import llm_factory
         from ragas.metrics import (
