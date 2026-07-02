@@ -1,0 +1,295 @@
+{
+  "passed": false,
+  "timestamp": "2026-07-02T03:57:25.205186+00:00",
+  "judge_model": "gpt-4.1-2025-04-14",
+  "thresholds": {
+    "faithfulness": 0.9,
+    "answer_relevancy": 0.8,
+    "context_precision": 0.8,
+    "context_recall": 0.8,
+    "critical_faithfulness_min": 0.75
+  },
+  "aggregate_means": {
+    "faithfulness": 0.5221,
+    "answer_relevancy": 0.617,
+    "context_precision": 0.6272,
+    "context_recall": 0.1667
+  },
+  "failures": [
+    "faithfulness mean 0.522 below 0.900",
+    "answer_relevancy mean 0.617 below 0.800",
+    "context_precision mean 0.627 below 0.800",
+    "context_recall mean 0.167 below 0.800",
+    "critical faithfulness below 0.750: ['assignment-unauthorized-consequence', 'assignment-operation-of-law', 'assignment-wholly-owned-subsidiary']"
+  ],
+  "cases": [
+    {
+      "case_id": "assignment-unauthorized-consequence",
+      "critical": true,
+      "user_input": "What happens if a party attempts an assignment without consent?",
+      "response": "The retrieved agreements differ on consequences for assignment without consent. XYBERNAUT states such assignment is ab initio null and void and of no force or effect [1]. DYNTEK similarly provides that any attempt to assign without consent is void and of no effect ab initio [2]. LinkPlus requires prior written consent but does not specify consequences if consent is not obtained [3].",
+      "reference": "A grounded answer should state only the consequences expressly shown in retrieved anti-assignment clauses. It may say sources differ and must not imply every unauthorized assignment is generally void or voidable unless each cited source says so.",
+      "retrieved_contexts": [
+        "Any such  assignment or delegation  made without the written consent of the  other  party  hereto  shall  be ab  inito  null and void and of no force or effect.",
+        "Any attempt to assign this Agreement without such consent (if required) shall be void and of no effect AB INITIO.",
+        "This Agreement may not be assigned in whole or in part by                   either party without prior written consent of the other.",
+        "Neither Party may assign this Agreement to a Third Party unless both Parties have agreed to such assignment in a writing signed by an authorized representative of each Party hereto; provided, however, that upon providing written notice, (i) either Party may, without the other Party's consent, assign this Agreement to an Affiliate or to any Third Party entity that acquires all or substantially all of its assets to which this Agreement relates and (ii) Achaogen may, without Microgenics' consent, assign this Agreement (in whole or in part) to a Third Party licensee of Achaogen's rights with respect to Plazomicin.",
+        "This Agreement may not be assigned by either Party, except with the prior written consent of the other Party."
+      ],
+      "expected_clause_type": "Anti-Assignment",
+      "resolved_clause_type": "Anti-Assignment",
+      "abstained": false,
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.6647820430607111,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "case_id": "assignment-operation-of-law",
+      "critical": true,
+      "user_input": "Does the assignment restriction apply to transfers by operation of law?",
+      "response": "The retrieved agreements differ on assignment restrictions applying to transfers by operation of law but generally require prior written consent. TRICITYBANKSHARES prohibits assignment by operation of law without consent, except for certain mergers and assignments to successors of a division [1]. Clickstream restricts assignment without consent but allows transfer of payment rights with notice, not explicitly addressing operation of law [2]. BloomEnergy bars assignment by operation of law without consent, except collateral assignments to financiers [3].",
+      "reference": "A grounded answer should preserve source differences about transfers by operation of law, citing clauses that expressly cover them and saying when retrieved evidence is silent rather than giving an unconditional yes.",
+      "retrieved_contexts": [
+        "This Agreement may not be assigned by either party, by operation of law or otherwise, without the prior written consent of the other party, which consent shall not be unreasonably withheld, provided that (a) M&I's consent need not be obtained in connection with the assignment of this Agreement pursuant to a merger in which Customer is a party and as a result of which the surviving corporation becomes an Affiliate of another bank holding company, bank, savings and loan association or other financial institution having a capital and surplus of at least $100,000,000 so long as the provisions of Section 21.11 are complied with and (b) M&I may freely assign this Agreement (i) in connection with a merger, corporate reorganization or sale of all or substantially all of its assets, stock or securities, or (ii) to any entity which is a successor to the assets or the business of the M&I Data Services division of M&I.",
+        "The Developer may not, without the written consent of the Client, assign, subcontract, or delegate its obligations under this Agreement, except that the Developer may transfer the right to receive any amounts that may be payable to it for its Services under this Agreement, which transfer will be effective only after receipt by the Client of written notice of such assignment or transfer.",
+        "This Agreement and all of the provisions hereof shall be binding upon and inure to the benefit of the Parties and their respective successors and permitted assigns (including by operation of law), but neither this Agreement nor any of the rights, interests or obligations hereunder shall be assigned by any Party, whether by operation of law or otherwise, without the prior written consent of the other Party; provided that either Party may collaterally assign its rights under this Agreement to any party providing debt or equity financing to such Party without the consent of the other Party.",
+        "Except as expressly provided hereunder, neither this Agreement nor any rights or obligations hereunder may be assigned or otherwise transferred by either party without the prior written consent of the other party (which consent shall not be unreasonably withheld); provided, however, that either party may assign this Agreement and its rights and obligations hereunder without the other party's consent in connection with the transfer or sale of all or substantially all of the business of such party to which this Agreement relates to a Third Party, whether by merger, sale of stock, sale of assets or otherwise (a \"Change of Control Event\").",
+        "If BKC does not exercise its option under Subparagraph 15.4.1,  Franchisee may conclude the sale to the purchaser who made the offer  provided BKC's consent to the assignment or sale be first obtained as provided below."
+      ],
+      "expected_clause_type": "Anti-Assignment",
+      "resolved_clause_type": "Anti-Assignment",
+      "abstained": false,
+      "scores": {
+        "faithfulness": 0.2222222222222222,
+        "answer_relevancy": 0.8023208028231986,
+        "context_precision": 0.999999999975,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "case_id": "assignment-wholly-owned-subsidiary",
+      "critical": true,
+      "user_input": "Is assignment permitted to a wholly owned subsidiary?",
+      "response": "The retrieved agreements differ on assignment to a wholly owned subsidiary. GSV permits assignment to a wholly owned subsidiary without consent [1]. TELKOMSA allows assignment to a subsidiary or holding company with prior consent and conditions [2]. TRICITYBANKSHARES does not explicitly permit assignment to a wholly owned subsidiary but allows assignment to certain successors or in mergers [3].",
+      "reference": "A grounded answer should distinguish affiliate, subsidiary, and wholly owned subsidiary language. It should not infer that permission for an affiliate covers a wholly owned subsidiary unless the retrieved clause says so.",
+      "retrieved_contexts": [
+        "Neither party may assign this Agreement, in whole or in             part, without the other party's written consent (which will not be             unreasonably withheld), except that no such consent will be required             in connection with (i) a merger, reorganization or sale of all, or             substantially all, of such party's assets or (ii) either party's             assignment and/or delegation of its rights and responsibilities             hereunder to a wholly-owned subsidiary or joint venture in which the             assigning party holds an interest.",
+        "Neither Party shall be entitled to cede, or delegate its rights and obligations arising   from this AGREEMENT or to assign this AGREEMENT to any other person or   entity without the prior written consent of the other party provided that either party   shall be entitled to assign this AGREEMENT, in whole and not part only, to any of   its' subsidiary or holding companies (as defined and contemplated in the   Companies Act of 1973, as amended) provided that any such assignment shall   ipso facto cease to be of any further force and effect as between the parties,   should the assignee cease, for whatever reason, to be a subsidiary or holding   company, of the assignor.",
+        "This Agreement may not be assigned by either party, by operation of law or otherwise, without the prior written consent of the other party, which consent shall not be unreasonably withheld, provided that (a) M&I's consent need not be obtained in connection with the assignment of this Agreement pursuant to a merger in which Customer is a party and as a result of which the surviving corporation becomes an Affiliate of another bank holding company, bank, savings and loan association or other financial institution having a capital and surplus of at least $100,000,000 so long as the provisions of Section 21.11 are complied with and (b) M&I may freely assign this Agreement (i) in connection with a merger, corporate reorganization or sale of all or substantially all of its assets, stock or securities, or (ii) to any entity which is a successor to the assets or the business of the M&I Data Services division of M&I.",
+        "Assignment  Without the express prior written consent of Diversinet (not to be unreasonably refused), Reseller may not assign this Agreement or its interest  herein in whole or in part but Reseller shall continue to be responsible should the assignee fail to perform. Diversinet may assign this Agreement at  any time and in such event, this Agreement shall continue in full force and effect as if the assignee were named as the licensor in the first instance  but Diversinet shall continue to be responsible should the assignee fail to perform.",
+        "Any assignment in violation hereof is void."
+      ],
+      "expected_clause_type": "Anti-Assignment",
+      "resolved_clause_type": "Anti-Assignment",
+      "abstained": false,
+      "scores": {
+        "faithfulness": 0.6,
+        "answer_relevancy": 0.7522702180944812,
+        "context_precision": 0.6388888888675925,
+        "context_recall": 1.0
+      }
+    },
+    {
+      "case_id": "liability-excluded-damages",
+      "critical": false,
+      "user_input": "Which categories of loss are excluded by the liability clause?",
+      "response": "The retrieved agreements differ on categories of loss excluded by the liability clause. BloomEnergy excludes indirect, punitive, special, consequential damages, and loss of profits from liability, limiting damages to direct damages except for third-party indemnification claims [1]. TELKOMSA limits liability to the aggregate license fees paid but does not specify excluded categories of loss [2].",
+      "reference": "A grounded answer should identify only the damages or loss categories stated in the retrieved liability clauses, citing each source and avoiding claims about every agreement if the sources differ or are silent.",
+      "retrieved_contexts": [
+        "Subject always to the Maximum Liability limitations set forth in the preceding sentence, except for damages specifically provided for in this Agreement or in connection with the indemnification for damages awarded to a third party under a Third Party Claim, damages hereunder are limited to direct damages, and in no event shall a Party be liable to the other Party, and the Parties hereby waive claims, for (a) indirect, punitive, special or consequential damages or loss of profits; provided, however, that the loss of profits language set forth in this Section 7.1 shall not be interpreted to exclude from Indemnifiable Losses any claim, demand, suit, loss, liability, damage, obligation, payment, cost or expense (including the cost and expense of any action, suit, proceeding, assessment, judgment, settlement or compromise relating thereto and reasonable attorneys' fees and reasonable<omitted>disbursements in connection therewith) that would otherwise be included in the definition of Indemnifiable Losses because they result from a reduction in the profits of Owner, Diamond State Generation Holdings, LLC, or both, and (b) losses or liabilities incurred by the officers, directors, members, managers, partners, shareholders or Affiliates of such Party (unless on behalf of Owner).",
+        "Subject to, and without prejudice to the provisions of this clause 11. 1 and clause   10, SAP AFRICA'S liability for any loss or damages of whatever nature or however   arising, that may be suffered by TELKOM or AFFILIATE from USE or license of the   SOFTWARE and irrespective of the number of occurrences giving rise to such   liability, shall be limited to the aggregate of all License Fees paid by TELKOM to   SAP AFRICA in terms of this AGREEMENT, up until the date when such damages   are determined or agreed.",
+        "Notwithstanding any provision in the Agreement to the contrary, M&I's liability to Customer for claims arising out of the ACH Services performed by M&I pursuant to this Section 6.5 shall be limited to errors and omissions which are caused solely by M&I's gross negligence or willful misconduct and which cannot be remedied through the processing of appropriate corrected ACH Entry(ies).",
+        "EXCEPT UNDER SECTIONS 13(a) AND 13(b), IN NO EVENT WILL EITHER PARTY             BE LIABLE TO THE OTHER FOR ANY SPECIAL, INCIDENTAL OR CONSEQUENTIAL             DAMAGES, WHETHER BASED ON BREACH OF CONTRACT, TORT (INCLUDING             NEGLIGENCE) OR OTHERWISE, WHETHER OR NOT THAT PARTY HAS BEEN ADVISED             OF THE POSSIBILITY OF SUCH DAMAGE. THE LIABILITY OF EITHER PARTY FOR             DAMAGES OR ALLEGED DAMAGES HEREUNDER, WHETHER IN CONTRACT, TORT OR             ANY OTHER LEGAL THEORY, IS LIMITED TO, AND WILL NOT EXCEED, THE             AMOUNTS TO BE PAID BY CLIENT TO EXCITE HEREUNDER.",
+        "TouchStar shall have no liability to           Reseller or any Other Reseller by reason of the termination or           expiration of this Agreement for compensation, reimbursement, or           damages of any kind, including any loss of prospective profits on           anticipated sales, loss of goodwill, or investments made in reliance           on this Agreement."
+      ],
+      "expected_clause_type": "Cap On Liability",
+      "resolved_clause_type": "Cap On Liability",
+      "abstained": false,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8101383054294202,
+        "context_precision": 0.9999999999,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "case_id": "liability-direct-royalties",
+      "critical": false,
+      "user_input": "Can unpaid royalties or milestones qualify as direct damages?",
+      "response": "The retrieved agreements do not explicitly state that unpaid royalties or milestones qualify as direct damages. The TRICITYBANKSHARES agreement defines direct damages with specific cost categories unrelated to unpaid royalties or milestones [1]. The WARNINGMANAGEMENTSERVICES agreement limits liability to amounts of royalties actually received, implying unpaid royalties are not considered direct damages [2].",
+      "reference": "A grounded answer should explain whether the retrieved liability evidence treats unpaid royalties or milestones as direct damages, while limiting the conclusion to the cited agreements.",
+      "retrieved_contexts": [
+        "Customer and M&I shall be liable to the other only for direct damages arising out of or relating to their respective performance or non-performance of obligations under this Agreement; provided, however, that the following shall be considered direct damages for the purposes of this Agreement:\n\n          A.   Costs of recreating or reloading any of Customer's information that is lost or damaged;\n\n          B.   Costs of implementing a work-around in respect of a failure to provide the Services;\n\n          C.   Costs of replacing lost or damaged equipment, software, and materials;\n\n          D.   Costs and expenses incurred by Customer to correct errors in software maintenance and enhancements provided as part of the Services;\n\n          E.   Costs and expenses incurred by Customer to procure the Services from an alternate source, to the extent in excess of M&I's charges under this Agreement; and\n\n          F.   Straight time, overtime, or related expenses incurred by Customer, including overhead allocations of Customer for Customer's employees, wages and salaries of additional employees, travel expenses, overtime expenses, telecommunication charges, and similar charges, due to failure of M&I to provide the Services or incurred in connection with subsections (A) through (E) above, to the extent that such straight time, overtime, or related expenses exceed what Customer would have paid to M&I if M&I were providing the Services, and limited to the amount that M&I would have paid to Customer under subsection (E) above if Customer chose to procure the Services from an alternate source.",
+        "In no event (including, but not limited to, Manning's or Pey Dirt's default hereunder) shall Manning or Pey Dirt be liable to Company (or any entity claiming through Company) for any amount in excess of the amounts of royalties actually received by Pey Dirt hereunder, excluding the reimbursement of expenses.",
+        "Subject always to the Maximum Liability limitations set forth in the preceding sentence, except for damages specifically provided for in this Agreement or in connection with the indemnification for damages awarded to a third party under a Third Party Claim, damages hereunder are limited to direct damages, and in no event shall a Party be liable to the other Party, and the Parties hereby waive claims, for (a) indirect, punitive, special or consequential damages or loss of profits; provided, however, that the loss of profits language set forth in this Section 7.1 shall not be interpreted to exclude from Indemnifiable Losses any claim, demand, suit, loss, liability, damage, obligation, payment, cost or expense (including the cost and expense of any action, suit, proceeding, assessment, judgment, settlement or compromise relating thereto and reasonable attorneys' fees and reasonable<omitted>disbursements in connection therewith) that would otherwise be included in the definition of Indemnifiable Losses because they result from a reduction in the profits of Owner, Diamond State Generation Holdings, LLC, or both, and (b) losses or liabilities incurred by the officers, directors, members, managers, partners, shareholders or Affiliates of such Party (unless on behalf of Owner).",
+        "EXCEPT TO THE EXTENT DIRECT FORESEEABLE DAMAGES, IN NO EVENT SHALL DIVERSINET BE LIABLE FOR ANY INDIRECT,  SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES (INCLUDING WITHOUT LIMITATION ANY COMMERCIAL DAMAGES OR  LOSSES) AS A RESULT OF THE USE, SALE OR DISTRIBUTION OF THE BUNDLED PRODUCT, WHETHER BY WAY OF A LEGAL  THEORY OF CONTRACT, TORT (INCLUDING NEGLIGENCE), PRODUCT LIABILITY, STRICT LIABILITY, OR ANY OTHER THEORY,  EVEN IF DIVERSINET HAS BEEN INFORMED OF THE POSSIBILITY OF SUCH DAMAGES.",
+        "NOTWITHSTANDING ANY OTHER PROVISION OF THIS AGREEMENT, JHU ADDITIONALLY DISCLAIMS ALL OBLIGATIONS AND LIABILITIES ON THE PART OF JHU AND INVENTORS, FOR DAMAGES, INCLUDING, BUT NOT LIMITED TO, DIRECT, INDIRECT, SPECIAL, AND CONSEQUENTIAL DAMAGES, ATTORNEYS' AND EXPERTS' FEES, AND COURT COSTS (EVEN IF JHU HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES, FEES OR COSTS), ARISING OUT OF OR IN CONNECTION WITH THE MANUFACTURE, USE, OR SALE OF THE LICENSED PRODUCTS AND LICENSED SERVICES UNDER THIS AGREEMENT."
+      ],
+      "expected_clause_type": "Cap On Liability",
+      "resolved_clause_type": "Cap On Liability",
+      "abstained": false,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8929941538664252,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "case_id": "license-sublicense-transfer",
+      "critical": false,
+      "user_input": "Is it also transferable?",
+      "response": "The licenses in the retrieved agreements are explicitly non-transferable. The XYBERNAUT license grants a limited and non-transferable right to use the Licensed Materials during the term [1]. The TRICITYBANKSHARES license similarly grants a non-exclusive, non-transferable license with specific conditions under which it applies [2].",
+      "reference": "A grounded answer should answer transferability separately from sublicensing. It must not infer transfer rights from sublicensing language or infer sublicensing from nontransferability language.",
+      "retrieved_contexts": [
+        "XC does hereby  grant AJR a limited and  non-transferable  license and  non-exclusive  right to use XC's logo and  trademarks and service marks set forth on Schedule A attached hereto (the \"Licensed  Materials\")  during the Term of this Agreement.",
+        "M&I hereby grants to Customer a non-exclusive, non-transferable license, through the end of the Term, to use the source code (including the right to make modifications thereto) on the terms and conditions set forth in this Article 23, upon payment of the then current license fees and the occurrence of the following events:\n\n     A.   M&I ceases to do business or refuses to provide the Services to Customer; or\n\n     B.   A voluntary or involuntary petition is commenced by or against M&I under any federal or state bankruptcy law, or a trustee in bankruptcy fails to timely assume this Agreement as an executory contract, or a substantial part of M&I's property or assets become subject to levy or seizure by any creditor and, in the case of an involuntary petition, the same is not dismissed within sixty (60) days after filing.",
+        "The parties hereby grant to each other non-exclusive, fully-paid, royalty-free licenses to utilize the other party's trademarks, as follows:\n\n(a) Biocept Trademarks. To facilitate the promotion and performance of Tests, during the Term Biocept hereby grants Life Technologies a non-exclusive, royalty-free, non-transferable license to use the Biocept Trademarks solely for<omitted>use in connection with the promotion and performance of the Tests in the Territory.",
+        "TouchStar hereby grants to Reseller, with the additional right                 to grant to Other Resellers who or which enter into an Other                 Reseller Agreement, the nontransferable and nonexclusive right                 and license to use one copy of the TouchStar Software as                 necessary to demonstrate the TouchStar Software to potential                 Customers in the Territory.",
+        "The License grant includes a license under all current and future patents owned by or licensed to LMG that are applicable to the LMG Tools and Documentation or the provision or receipt of the LMG Services, to the extent necessary to exercise any of the foregoing rights."
+      ],
+      "expected_clause_type": "License Grant",
+      "resolved_clause_type": "License Grant",
+      "abstained": false,
+      "scores": {
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.6065472039064665,
+        "context_precision": 0.999999999975,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "case_id": "license-duration",
+      "critical": false,
+      "user_input": "How long does it remain effective?",
+      "response": "The license remains effective through the end of the Term in both retrieved agreements. The TRICITYBANKSHARES license is effective through the end of the Term and may continue upon certain bankruptcy or business cessation events [1]. The XYBERNAUT license is granted for use during the Term of the Agreement [2].",
+      "reference": "A grounded answer should state whether the retrieved license-grant evidence specifies duration. If duration is not present, it should say the evidence is insufficient rather than claiming all licenses are perpetual.",
+      "retrieved_contexts": [
+        "M&I hereby grants to Customer a non-exclusive, non-transferable license, through the end of the Term, to use the source code (including the right to make modifications thereto) on the terms and conditions set forth in this Article 23, upon payment of the then current license fees and the occurrence of the following events:\n\n     A.   M&I ceases to do business or refuses to provide the Services to Customer; or\n\n     B.   A voluntary or involuntary petition is commenced by or against M&I under any federal or state bankruptcy law, or a trustee in bankruptcy fails to timely assume this Agreement as an executory contract, or a substantial part of M&I's property or assets become subject to levy or seizure by any creditor and, in the case of an involuntary petition, the same is not dismissed within sixty (60) days after filing.",
+        "XC does hereby  grant AJR a limited and  non-transferable  license and  non-exclusive  right to use XC's logo and  trademarks and service marks set forth on Schedule A attached hereto (the \"Licensed  Materials\")  during the Term of this Agreement.",
+        "The License grant includes a license under all current and future patents owned by or licensed to LMG that are applicable to the LMG Tools and Documentation or the provision or receipt of the LMG Services, to the extent necessary to exercise any of the foregoing rights.",
+        "SpinCo, for itself and as representative of all other members of the SpinCo Group, hereby grants to RemainCo (x) a perpetual, irrevocable, exclusive, royalty-free, worldwide right and license with the right to grant sublicenses (solely as set forth in Section 5.6) to use the SpinCo Know- How currently or previously used in connection with the RemainCo Business or otherwise in the possession of RemainCo or any member of the RemainCo Group as of Distribution Date (the \"Licensed SpinCo Know-How\"), for the continued operation of the RemainCo Business and any future extensions of the RemainCo Business in the RemainCo Core Field and (y) a perpetual, irrevocable, non-exclusive, royalty-free, worldwide right and license with the right to grant sublicenses (solely as set forth in Section 5.6) to use the Licensed SpinCo Know-How for the continued operation of the RemainCo Business and any future extensions of the RemainCo Business in any field other than the RemainCo Core Field or the SpinCo Core Field; provided, however, the foregoing licenses shall not extend to (i) SpinCo Know-How<omitted>licensed by SpinCo or any other member of the SpinCo Group if and to the extent the licensing of same to RemainCo would constitute a breach of an agreement with any Third Party executed prior to the Effective Date or result in any expense to SpinCo or any member of the SpinCo Group for payments to such Third Party or (ii) any intellectual property not owned by one or more members of the SpinCo Group, or as to which no member of the SpinCo Group has the right to grant sublicenses, as of the Effective Date.",
+        "Solely in the case of termination of this Agreement by Achaogen under Section 9.3 (Termination for Cause):   9.4.4.1 Microgenics hereby grants Achaogen a Transfer License; provided, that, Achaogen covenants not to use the Transfer License beyond the scope set forth in Section 1.33."
+      ],
+      "expected_clause_type": "License Grant",
+      "resolved_clause_type": "License Grant",
+      "abstained": false,
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.5872875989007076,
+        "context_precision": 0.99999999998,
+        "context_recall": 1.0
+      }
+    },
+    {
+      "case_id": "audit-frequency",
+      "critical": false,
+      "user_input": "How often may a party conduct an audit?",
+      "response": "The retrieved agreements differ on audit frequency rights. LinkPlus allows one audit after each calendar year, initiated by June 30th [1]. VALENCETECHNOLOGY permits audits upon advance notice but does not specify frequency [2]. MACROGENICS limits audits to once per calendar year with reasonable advance notice [3].",
+      "reference": "A grounded answer should describe the audit frequency found in the cited audit-rights clauses and preserve differences across agreements instead of giving one rule for all agreements.",
+      "retrieved_contexts": [
+        "Each party shall have the right to conduct                                     an audit after the end of each calendar year                                     to verify the accuracy of the other party's                                     quarterly reports for that year, provided                                     the audit must be initiated no later than                                     June 30th of each year, and that if no such                                     audit is conducted, then the quarterly                                     reports for that year will be deemed                                     accurate.",
+        "In addition, each Party at its own expense and upon advance notice to the Joint Venture Company may appoint an accountant (which may be either an accountant registered abroad or registered in China), to audit the accounts of the Joint Venture Company on behalf of such Party.",
+        "Upon the written request of a Party (\"Requesting Party\") with reasonable advance notice and not more than once in each Calendar Year, the other Party shall permit an independent certified public accounting firm of nationally recognized standing selected by Requesting Party and reasonably acceptable to the other Party, at its own expense, to have access during normal business hours to such of the records as may be reasonably necessary to verify the accuracy of the reports under Section 8 for any Calendar Year ending not more than thirty-six (36) months prior to the date of such request.",
+        "Any costs and expenses associated with such inspections shall be for the account of the party requesting such inspection.",
+        "Franchisee shall fully cooperate with Pretzel Time's representatives and independent accountants hired by Pretzel Time to conduct any such inspection or audit."
+      ],
+      "expected_clause_type": "Audit Rights",
+      "resolved_clause_type": "Audit Rights",
+      "abstained": false,
+      "scores": {
+        "faithfulness": 0.14285714285714285,
+        "answer_relevancy": 0.5219388702525025,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "case_id": "audit-cost-threshold",
+      "critical": false,
+      "user_input": "Who pays the audit costs if a payment deficiency exceeds three percent?",
+      "response": "The retrieved agreements differ on who pays audit costs if a payment deficiency exceeds a certain percentage. In LinkPlus, if an audit shows an underpayment over 3%, the Payor pays for its own auditor to verify the audit [1]. In DIVERSINET, if a deficiency exceeds 5%, the Reseller pays the audit costs incurred by Diversinet [2].",
+      "reference": "A grounded answer should identify who pays audit costs when the payment deficiency exceeds three percent, if that threshold appears in the retrieved audit-rights evidence.",
+      "retrieved_contexts": [
+        "In the event a Payee's audit shows that the                                     Gross Proceeds or Production Costs of the                                     Payor resulted in an under-payment of more                                     than three percent (3.0%) to the Payee, then                                     the Payor shall have the right, at the                                     Payor's cost, to have its own auditor verify                                     the audit.",
+        "If such examination reveals  a deficiency in any amounts paid, Reseller agrees to pay any such deficiency forthwith upon demand, plus interest calculated in accordance with  Section (Late Charges and Taxes) above and, if in excess of 5%, the cost of the audit incurred by Diversinet.",
+        "The audit will be conducted at the expense of Pretzel Time, provided that if an audit  disclosed an  understatement  of two percent (2%), as described above,  Franchisee will bear the cost of the audit,  including without limitation,  the charges of attorneys  and any  independent  accountants,  their travel   expenses,   room  and  board,   and   compensation  of  Pretzel  Time's representatives  and  independent  accountants."
+      ],
+      "expected_clause_type": "Audit Rights",
+      "resolved_clause_type": "Audit Rights",
+      "abstained": false,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.78881479000113,
+        "context_precision": 0.9999999999,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "case_id": "termination-right-holder",
+      "critical": false,
+      "user_input": "Is the termination right available to both parties or only one party?",
+      "response": "The retrieved agreements differ on termination rights: BIOCEPT allows both parties to terminate for any reason with 120 days' notice. TUNIU permits only Party B to terminate without Party A's consent. EMERALDHEALTHTHERAPEUTICS grants only the Contractor termination rights with 30 days' notice [1][2][3].",
+      "reference": "A grounded answer should identify whether the cited termination-for-convenience clauses give the right to both parties or only one party, preserving differences between retrieved agreements.",
+      "retrieved_contexts": [
+        "Both parties shall have the right to terminate this Agreement at any time, for any or for no reason, upon one hundred twenty (120) days written notice to the other party.",
+        "Party B shall have the right to terminate this Agreement in advance without the prior written consent from Party A, bysending a written notice to Party A but Party A may not terminate or rescind this Agreement;",
+        "The Contractor may terminate this Agreement and his or her engagement for any reason at any time upon providing 30 days advance notice in writing to Emerald. Termination will be effective, at Emeralds' election, on a date which is no earlier than the date such notice is received and no later than the date which is 30 days following that date.",
+        "Customer may terminate this Agreement during the Term upon at least one (1) years' written notice to M&I, provided that Customer pays M&I an early termination fee (\"Termination for Convenience Fee\") in an amount equal to REDACTED of the Estimated Remaining Value.",
+        "The Reseller Agreement can be terminated at any time at the discretion of either party."
+      ],
+      "expected_clause_type": "Termination For Convenience",
+      "resolved_clause_type": "Termination For Convenience",
+      "abstained": false,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.5085942308098913,
+        "context_precision": 0.8874999999778125,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "case_id": "termination-anniversary",
+      "critical": false,
+      "user_input": "Does the termination right become available only after a particular anniversary?",
+      "response": "The retrieved agreements differ on whether the termination right becomes available only after a particular anniversary. TELKOMSA allows termination with 30 days' notice at any time without reference to an anniversary [1]. EMERALDHEALTHTHERAPEUTICS permits termination with 30 days' notice at any time [2]. TRICITYBANKSHARES requires at least one year's written notice, implying termination only after a year [3].",
+      "reference": "A grounded answer should state whether the retrieved termination-for-convenience evidence conditions the right on an anniversary, and should not claim all agreements use the same anniversary rule.",
+      "retrieved_contexts": [
+        "This AGREEMENT and the licence granted hereunder shall terminate should any   of the following events occur:   6. 2. 1.        30 (thirty) days after TELKOM gives SAP AFRICA written notice of   TELKOM's wish to terminate this AGREEMENT for any reason. Any such   termination shall be subject to accrued rights and obligations but only after   payment of all Licence and Maintenance Fees then due and owing;",
+        "The Contractor may terminate this Agreement and his or her engagement for any reason at any time upon providing 30 days advance notice in writing to Emerald. Termination will be effective, at Emeralds' election, on a date which is no earlier than the date such notice is received and no later than the date which is 30 days following that date.",
+        "Customer may terminate this Agreement during the Term upon at least one (1) years' written notice to M&I, provided that Customer pays M&I an early termination fee (\"Termination for Convenience Fee\") in an amount equal to REDACTED of the Estimated Remaining Value.",
+        "Both parties shall have the right to terminate this Agreement at any time, for any or for no reason, upon one hundred twenty (120) days written notice to the other party.",
+        "This Agreement shall continue in force for a term           of twelve (12) months from the Effective Date, unless terminated           earlier under the provisions of this Article 8 (the \"Term\"); PROVIDED           that TouchStar shall have the right to terminate this Agreement at any           time after the Effective Date upon not less than fifteen (15) days'           prior written notice to Reseller."
+      ],
+      "expected_clause_type": "Termination For Convenience",
+      "resolved_clause_type": "Termination For Convenience",
+      "abstained": false,
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.4684022134406086,
+        "context_precision": 0.99999999998,
+        "context_recall": 0.0
+      }
+    },
+    {
+      "case_id": "unsupported-indemnity",
+      "critical": false,
+      "user_input": "Is either party required to indemnify the other?",
+      "response": "The current QFind index only covers assignment restrictions, liability caps, license grants, audit rights, and termination for convenience. I could not match this question to one of those supported clause types.",
+      "reference": "A grounded answer should abstain because indemnity is outside the evaluated QFind clause categories, returning no retrieved evidence instead of answering from unrelated clauses.",
+      "retrieved_contexts": [],
+      "expected_clause_type": null,
+      "resolved_clause_type": null,
+      "abstained": true,
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      }
+    }
+  ]
+}

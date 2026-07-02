@@ -1,0 +1,11 @@
+{
+  "documents": 30,
+  "clause_evidence_records": 244,
+  "clause_counts": {
+    "Anti-Assignment": 49,
+    "Audit Rights": 67,
+    "Cap On Liability": 47,
+    "License Grant": 61,
+    "Termination For Convenience": 20
+  }
+}
