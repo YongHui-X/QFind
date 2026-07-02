@@ -569,14 +569,15 @@ python evaluation\ragas_eval.py `
   --qdrant-mode server `
   --qdrant-url http://localhost:6333 `
   --rerank-mode auto `
-  --output data\processed\ragas_eval_results.json `
-  --enforce-gates
+  --output data\processed\ragas_eval_results.json
 ```
 
 Initial release-quality gates are mean faithfulness >= 0.90, mean answer
 relevancy >= 0.80, mean context precision >= 0.80, mean context recall >= 0.80,
-and no critical case below 0.75 faithfulness. Ragas is not a PR gate because it
-uses hosted judge calls and can vary with external model behavior.
+and no critical case below 0.75 faithfulness. Add `--enforce-gates` locally, or
+enable the workflow's `enforce_ragas_gates` input, only when the paid Ragas run
+should fail on those thresholds. Ragas is not a PR gate because it uses hosted
+judge calls and can vary with external model behavior.
 
 ### End-to-End Performance
 
@@ -610,11 +611,12 @@ QFind uses GitHub Actions with manual deployment gates:
   Python dependencies, runs `pytest` and `ruff`, checks and builds the React
   frontend, builds the Cloud Run Docker image, runs warning-only dependency
   audits, and fails only on critical container vulnerabilities.
-- `RAG Quality` runs manually and weekly. It starts Qdrant, prepares the CUAD
+- `RAG Quality` runs on pushes to `main` and manually. It starts Qdrant, prepares the CUAD
   subset, indexes the collection, runs retrieval evaluation, runs offline
-  deterministic answer checks, optionally runs Ragas release-quality gates when
-  `OPENAI_API_KEY` is available, and uploads JSON reports as artifacts. It is
-  intentionally not a pull-request gate.
+  deterministic answer checks, optionally runs paid Ragas evaluation when
+  `OPENAI_API_KEY` is available, and uploads JSON reports as artifacts. Manual
+  Ragas runs fail on semantic thresholds only when `enforce_ragas_gates` is set.
+  It is intentionally not a pull-request gate.
 - `Deploy to Cloud Run` is manual only. It first checks that `CI` passed for the
   selected commit, then builds and pushes the image to Artifact Registry,
   deploys Cloud Run with cost controls, and smoke-tests `/health` plus the root

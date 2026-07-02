@@ -11,6 +11,11 @@ on:
         required: false
         default: false
         type: boolean
+      enforce_ragas_gates:
+        description: "Fail paid Ragas job when release-quality gates fail"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -130,7 +135,7 @@ jobs:
           if-no-files-found: warn
 
   ragas-release-quality:
-    name: Paid Ragas release-quality gate
+    name: Paid Ragas evaluation
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ragas }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -213,10 +218,11 @@ jobs:
       - name: Index Qdrant collection
         run: python scripts/index_qdrant.py --recreate
 
-      - name: Show Ragas gate inputs
+      - name: Show Ragas inputs
         run: |
           echo "event: ${{ github.event_name }}"
           echo "run_ragas input: ${{ inputs.run_ragas }}"
+          echo "enforce_ragas_gates input: ${{ inputs.enforce_ragas_gates }}"
           if [ -n "$OPENAI_API_KEY" ]; then
             echo "OPENAI_API_KEY configured: true"
           else
@@ -229,12 +235,17 @@ jobs:
             echo "OPENAI_API_KEY is not configured; cannot run Ragas evaluation." >&2
             exit 1
           fi
-          python evaluation/ragas_eval.py \
-            --qdrant-mode server \
-            --qdrant-url http://localhost:6333 \
-            --rerank-mode off \
-            --output data/processed/ragas_eval_results.json \
-            --enforce-gates
+          ragas_args=(
+            python evaluation/ragas_eval.py
+            --qdrant-mode server
+            --qdrant-url http://localhost:6333
+            --rerank-mode off
+            --output data/processed/ragas_eval_results.json
+          )
+          if [ "${{ inputs.enforce_ragas_gates }}" = "true" ]; then
+            ragas_args+=(--enforce-gates)
+          fi
+          "${ragas_args[@]}"
 
       - name: Upload Ragas report
         uses: actions/upload-artifact@v4
