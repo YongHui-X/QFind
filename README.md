@@ -108,7 +108,17 @@ Measured over 120 sequential requests using GPT-4.1 mini Standard:
 | Critical failures | **0** |
 | P50 response latency | **1.69 s** |
 | P95 response latency | **2.43 s** |
-| P95 first-token latency | **1.22 s** |
+| P95 first-token latency / TTFT | **1.22 s** |
+
+Latency improved from the first saved-chat measurement to the final benchmark:
+
+| Metric | First measurement | Final benchmark | Improvement |
+| --- | ---: | ---: | ---: |
+| P95 response latency | 5.24 s | 2.43 s | **53.6% faster** |
+| P95 first-token latency / TTFT | 4.16 s | 1.22 s | **70.7% faster** |
+
+The first measurement was a small manual sample, while the final result comes
+from the repeatable 120-request benchmark.
 
 These answer-quality metrics are deterministic route, citation, abstention,
 required-concept, and forbidden-overclaim checks over 12 curated scenarios. They
@@ -160,7 +170,7 @@ infrastructure charges.
 ## Core Capabilities
 
 - Citation-grounded answers with expandable source evidence.
-- Hybrid dense and lexical retrieval.
+- Hybrid retrieval combining dense vector search with BM25 keyword search.
 - Adaptive cross-encoder reranking.
 - Deterministic follow-up contextualization.
 - Supported-topic routing and safe abstention.
@@ -207,7 +217,7 @@ Clause extraction and preparation
 Sentence Transformer embeddings
       |
       v
-Qdrant dense search + BM25 lexical search
+Qdrant dense vector search + BM25 keyword search
       |
       v
 Reciprocal-rank fusion
@@ -222,11 +232,11 @@ Adaptive top-3 cross-encoder reranking
 Grounded answer generation with citations
 ```
 
-The current retrieval configuration is:
+The current hybrid retrieval configuration is:
 
 ```text
 BGE dense retrieval: 6 candidates
-BM25 lexical retrieval: 6 candidates
+BM25 keyword retrieval: 6 candidates
 Fusion: reciprocal-rank fusion, k=60
 Deduplication: one leading passage per contract
 Reranking: adaptive, top 3 candidates
