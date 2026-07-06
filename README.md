@@ -22,7 +22,7 @@ This is a portfolio research prototype. It is not a legal advice tool.
 
 ## Contents
 
-- [Verified Results](#verified-results)
+- [Evaluation Results](#evaluation-results)
 - [Why It Matters](#why-it-matters)
 - [Core Capabilities](#core-capabilities)
 - [Demo Protections](#demo-protections)
@@ -79,12 +79,12 @@ than answered from unrelated evidence.
 
 <img src="docs/Media/unsupported%20topics.png" alt="QFind unsupported topic response" width="900">
 
-## Verified Results
+## Evaluation Results
 
 The final configuration was evaluated on 463 clause records from 30 CUAD
 contracts.
 
-### Retrieval
+### Retrieval Accuracy and Latency
 
 | Metric | Result |
 | --- | ---: |
@@ -96,7 +96,7 @@ contracts.
 | P95 reranking latency | **124.6 ms** |
 | Evaluation cases passed | **11/11** |
 
-### End-to-End Chat
+### End-to-End Answer Quality and Latency
 
 Measured over 120 sequential requests using GPT-4.1 mini Standard:
 
@@ -109,6 +109,8 @@ Measured over 120 sequential requests using GPT-4.1 mini Standard:
 | P50 response latency | **1.69 s** |
 | P95 response latency | **2.43 s** |
 | P95 first-token latency / TTFT | **1.22 s** |
+
+### Latency Improvement
 
 Latency improved from the first saved-chat measurement to the final benchmark:
 
