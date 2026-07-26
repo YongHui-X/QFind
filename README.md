@@ -1,12 +1,10 @@
 # QFind
 
-**A RAG chatbot for asking contract questions and checking the source evidence.**
+**A RAG chatbot for answering contract questions with supporting source evidence.**
 
-QFind helps legal, procurement, and compliance reviewers ask plain-English
-questions about contracts and quickly see the clauses that support the answer.
-Instead of making users manually scan long agreements, this RAG chatbot retrieves
-relevant contract language, writes a concise answer, and shows the cited evidence
-used to produce it.
+QFind helps legal, procurement, and compliance teams quickly find answers within contracts using natural language questions.
+
+Instead of manually searching through lengthy agreements, QFind retrieves the most relevant clauses, generates a concise answer, and shows the supporting contract evidence so users can easily verify where the answer came from.
 
 The evaluated version of this RAG chatbot was tested on 463 clause evidence
 records from 30 CUAD contracts. On 11 curated retrieval test questions it reached
