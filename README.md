@@ -20,6 +20,8 @@ This is a portfolio research prototype. It is not a legal advice tool.
 
 ## Contents
 
+- [At a Glance](#at-a-glance)
+- [Product Demo](#product-demo)
 - [Evaluation Results](#evaluation-results)
 - [Why It Matters](#why-it-matters)
 - [Core Capabilities](#core-capabilities)
@@ -27,12 +29,19 @@ This is a portfolio research prototype. It is not a legal advice tool.
 - [How It Works](#how-it-works)
 - [Technology Stack](#technology-stack)
 - [Supported Contract Topics](#supported-contract-topics)
+- [Dataset Snapshot](#dataset-snapshot)
 - [Quick Start](#quick-start)
+- [Startup Commands](#startup-commands)
 - [Application Surfaces](#application-surfaces)
 - [Evaluation](#evaluation)
 - [CI/CD](#cicd)
-- [Deployment](#public-deployment)
+- [Telemetry and Persistence](#telemetry-and-persistence)
+- [Public Deployment](#public-deployment)
 - [Project Structure](#project-structure)
+- [Testing](#testing)
+- [Current Limitations](#current-limitations)
+- [Documentation](#documentation)
+- [Future Plans](#future-plans)
 
 ## At a Glance
 
@@ -304,13 +313,15 @@ coverage without sufficient testing.
 
 ## Quick Start
 
-### 1. Create the environment file
+These commands assume PowerShell from the repository root.
+
+### 1. Create `.env`
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Configure the answer model:
+Set the main local values:
 
 ```text
 OPENAI_API_KEY=...
@@ -323,18 +334,11 @@ SESSION_SIGNING_SECRET=replace-with-a-random-local-secret
 ### 2. Install dependencies
 
 Use Python 3.11 or 3.12 for the full development environment. Python 3.14 can
-install and run the main application, but skips the optional Ragas dependency
-because one of its transitive packages does not publish Python 3.14 wheels on
-Windows.
+run the main app, but may skip optional Ragas dependencies on Windows because
+some transitive packages do not publish Python 3.14 wheels.
 
 ```powershell
 python -m pip install -r requirements.txt
-```
-
-The commands below use the existing project environment:
-
-```powershell
-python
 ```
 
 ### 3. Start Qdrant
@@ -371,11 +375,12 @@ The FastAPI service serves the built React app from `frontend/dist` at `/`.
 ```powershell
 Set-Location frontend
 npm install
+npm run check
 npm run build
 Set-Location ..
 ```
 
-### 6. Start the full local app
+### 6. Start the local app
 
 Server mode uses the Docker Qdrant service from step 3:
 
@@ -399,8 +404,8 @@ http://127.0.0.1:8000/docs
 http://127.0.0.1:8000/health
 ```
 
-For quick local UI checks against the existing embedded index, use embedded
-mode instead of Docker Qdrant:
+For quick checks against the existing embedded index, use embedded mode instead
+of Docker Qdrant:
 
 ```powershell
 $env:QDRANT_MODE="embedded"
@@ -427,12 +432,14 @@ http://127.0.0.1:8000
 
 ## Startup Commands
 
-Use these from the repository root after dependencies are installed.
+Use these from the repository root after dependencies are installed and the
+index has been prepared.
 
 Build the React UI:
 
 ```powershell
 Set-Location frontend
+npm run check
 npm run build
 Set-Location ..
 ```
@@ -466,7 +473,7 @@ http://127.0.0.1:8000/
 
 ### React Chat
 
-- Served from the FastAPI root path after `npm run build`.
+- Served from the FastAPI root path after `frontend/dist` is built.
 - Left-rail new chat, search history, and collapsible chat history controls.
 - Browser session bootstrap through `GET /api/session`.
 - Sends chat requests with credentials so the signed session cookie is included.
