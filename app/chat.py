@@ -10,7 +10,6 @@ This module turns the retrieval layer into a grounded chatbot:
 from __future__ import annotations
 
 import json
-import logging
 import os
 import re
 import time
