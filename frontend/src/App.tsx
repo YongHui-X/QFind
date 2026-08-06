@@ -17,6 +17,34 @@ const STATUS_LABELS: Record<string, string> = {
   generating: "Drafting grounded answer",
 };
 
+const SUGGESTED_QUESTIONS = [
+  {
+    category: "Assignment",
+    question:
+      "Which TomOnline Co-Branding Agreement anti-assignment passage allows sublicensing only after Online BVI's prior written approval?",
+  },
+  {
+    category: "Liability",
+    question:
+      "Which NETGEAR Distributor Agreement passages cap total liability for damages under the agreement?",
+  },
+  {
+    category: "Licensing",
+    question:
+      "Which Cerence Intellectual Property Agreement passage grants SpinCo a worldwide license under the Nuance patents?",
+  },
+  {
+    category: "Audit",
+    question:
+      "Which TomOnline Co-Branding Agreement passage gives each party quarterly audit rights over books and records on fifteen days notice?",
+  },
+  {
+    category: "Termination",
+    question:
+      "Which Cardlytics Maintenance Agreement passage lets Bank of America terminate the agreement, an order, or customization schedules for convenience on forty-five days notice?",
+  },
+];
+
 function normalizeChats(chats: SavedChat[]): SavedChat[] {
   return chats.map((chat) => ({
     ...chat,
@@ -77,6 +105,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [historyQuery, setHistoryQuery] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bootstrapSession().catch((caught) => {
@@ -197,6 +226,15 @@ export default function App() {
     }
   }
 
+  function useSuggestedQuestion(suggestedQuestion: string) {
+    setQuestion(suggestedQuestion);
+    textareaRef.current?.focus();
+  }
+
+  async function copySuggestedQuestion(suggestedQuestion: string) {
+    await navigator.clipboard.writeText(suggestedQuestion);
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar sidebar-left">
@@ -204,7 +242,7 @@ export default function App() {
           <span className="brand-mark">QF</span>
           <div className="brand-copy">
             <strong>QFind</strong>
-            <small>Your personalised contract chatbot</small>
+            <small>Contract answers with cited evidence</small>
           </div>
         </div>
 
@@ -260,7 +298,7 @@ export default function App() {
             const evidence = displayEvidenceForMessage(message);
             return (
               <article className={`message ${message.role}`} key={message.id}>
-                <div className="avatar">{message.role === "user" ? "You" : "CL"}</div>
+                <div className="avatar">{message.role === "user" ? "You" : "QF"}</div>
                 <div className="bubble">
                   <p>{message.content}</p>
                   {evidence.items.length ? (
@@ -272,20 +310,13 @@ export default function App() {
                       <div className="evidence-list">
                         {evidence.items.map(({ citationNumber, result }) => (
                           <section className="evidence" key={result.id}>
-                            <div>
+                            <div className="evidence-header">
                               <strong>
                                 [{citationNumber}] {result.clause_type}
                               </strong>
                               <span>{result.source_pdf}</span>
                             </div>
                             <p>{result.text}</p>
-                            <small>
-                              {result.reranker_score !== null
-                                ? `reranker ${result.reranker_score.toFixed(3)}`
-                                : result.fused_score !== null
-                                  ? `hybrid ${result.fused_score.toFixed(4)}`
-                                  : `vector ${result.score.toFixed(3)}`}
-                            </small>
                           </section>
                         ))}
                       </div>
@@ -297,7 +328,7 @@ export default function App() {
           })}
           {status ? (
             <article className="message assistant pending-message" aria-live="polite">
-              <div className="avatar">CL</div>
+              <div className="avatar">QF</div>
               <div className="bubble pending-bubble">
                 <div className="status">
                   <span />
@@ -313,6 +344,7 @@ export default function App() {
           {error ? <div className="error">{error}</div> : null}
           <div className="input-row">
             <textarea
+              ref={textareaRef}
               maxLength={1000}
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
@@ -330,6 +362,35 @@ export default function App() {
           <small>Grounded retrieval over the indexed CUAD subset. Not legal advice.</small>
         </form>
       </main>
+
+      <aside className="sidebar-right" aria-label="Suggested questions">
+        <div className="suggestions-header">
+          <span>Suggested questions</span>
+        </div>
+        <div className="suggestion-list">
+          {SUGGESTED_QUESTIONS.map((item) => (
+            <div className="suggestion-item" key={item.question}>
+              <button
+                className="suggestion-fill"
+                type="button"
+                onClick={() => useSuggestedQuestion(item.question)}
+                disabled={busy}
+                title="Use this question"
+              >
+                <span>{item.category}</span>
+                <strong>{item.question}</strong>
+              </button>
+              <button
+                className="suggestion-copy"
+                type="button"
+                onClick={() => copySuggestedQuestion(item.question)}
+                title="Copy question"
+                aria-label={`Copy ${item.category} question`}
+              />
+            </div>
+          ))}
+        </div>
+      </aside>
     </div>
   );
 }

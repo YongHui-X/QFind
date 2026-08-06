@@ -1,5 +1,6 @@
 :root {
   color: #172026;
+  --chat-column-width: 900px;
   background:
     radial-gradient(circle at top left, rgba(255, 155, 112, 0.16), transparent 28%),
     radial-gradient(circle at top right, rgba(255, 196, 145, 0.15), transparent 20%),
@@ -35,7 +36,7 @@ button {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr) 280px;
   height: 100vh;
   gap: 0;
   overflow: hidden;
@@ -237,6 +238,129 @@ button {
   font-size: 0.71rem;
 }
 
+.sidebar-right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 14px;
+  background: #f7f4ef;
+  border-left: 1px solid rgba(25, 36, 42, 0.08);
+  overflow-y: auto;
+}
+
+.suggestions-header {
+  display: grid;
+}
+
+.suggestions-header span {
+  color: #1f2a31;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.suggestion-list {
+  display: grid;
+  gap: 9px;
+}
+
+.suggestion-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: stretch;
+  width: 100%;
+  border: 1px solid rgba(25, 36, 42, 0.1);
+  border-radius: 10px;
+  background: #fffdf9;
+  color: #243039;
+  box-shadow: 0 8px 18px rgba(31, 42, 47, 0.04);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+  overflow: hidden;
+}
+
+.suggestion-item:hover {
+  border-color: rgba(255, 156, 107, 0.5);
+  box-shadow: 0 12px 22px rgba(31, 42, 47, 0.07);
+  transform: translateY(-1px);
+}
+
+.suggestion-fill:focus-visible,
+.suggestion-copy:focus-visible {
+  outline: 2px solid rgba(255, 156, 107, 0.72);
+  outline-offset: -2px;
+}
+
+.suggestion-fill:disabled {
+  opacity: 0.52;
+  cursor: default;
+  transform: none;
+}
+
+.suggestion-fill {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 11px 10px 11px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.suggestion-fill span {
+  width: fit-content;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #eef2ee;
+  color: #536057;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.suggestion-fill strong {
+  color: #29343b;
+  font-size: 0.8rem;
+  line-height: 1.42;
+}
+
+.suggestion-copy {
+  position: relative;
+  width: 34px;
+  border: 0;
+  border-left: 1px solid rgba(25, 36, 42, 0.08);
+  background: rgba(25, 36, 42, 0.02);
+}
+
+.suggestion-copy::before,
+.suggestion-copy::after {
+  position: absolute;
+  width: 12px;
+  height: 14px;
+  border: 1.7px solid #69757c;
+  border-radius: 3px;
+  content: "";
+}
+
+.suggestion-copy::before {
+  top: 9px;
+  left: 9px;
+  background: #fffdf9;
+}
+
+.suggestion-copy::after {
+  top: 12px;
+  left: 12px;
+  background: #fffdf9;
+}
+
+.suggestion-copy:hover {
+  background: rgba(255, 156, 107, 0.13);
+}
+
 .main {
   min-width: 0;
   display: grid;
@@ -254,25 +378,24 @@ button {
 
 .message {
   display: grid;
-  grid-template-columns: 38px minmax(0, 720px);
+  grid-template-columns: 38px minmax(0, 1fr) 38px;
   gap: 12px;
-  max-width: 1000px;
+  max-width: var(--chat-column-width);
   margin: 0 auto 18px;
 }
 
 .message.user {
-  justify-content: end;
-  grid-template-columns: minmax(0, 720px) 38px;
+  grid-template-columns: 38px minmax(0, 1fr) 38px;
 }
 
 .message.user .avatar {
-  grid-column: 2;
+  grid-column: 3;
 }
 
 .message.user .bubble {
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 1;
-  justify-self: end;
+  justify-self: stretch;
   background: linear-gradient(135deg, #ff9c6b, #ffbe8a);
   color: #1b2227;
   border-color: rgba(255, 190, 138, 0.42);
@@ -292,6 +415,7 @@ button {
 }
 
 .bubble {
+  grid-column: 2;
   padding: 14px 16px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.9);
@@ -324,17 +448,26 @@ summary {
 }
 
 .evidence {
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid rgba(25, 36, 42, 0.08);
   border-radius: 10px;
   padding: 10px;
   background: #fbfaf8;
+  overflow: hidden;
 }
 
-.evidence div {
-  display: flex;
-  justify-content: space-between;
+.evidence-header {
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) minmax(0, 1fr);
+  align-items: start;
   gap: 8px;
   font-size: 0.75rem;
+}
+
+.evidence-header strong {
+  min-width: 0;
+  line-height: 1.25;
 }
 
 .evidence span {
@@ -342,6 +475,7 @@ summary {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: right;
 }
 
 .evidence p {
@@ -396,7 +530,7 @@ summary {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 10px;
-  max-width: 1000px;
+  max-width: var(--chat-column-width);
   margin: 0 auto;
   padding: 10px;
   border: 1px solid rgba(25, 36, 42, 0.09);
@@ -433,7 +567,7 @@ textarea {
 
 .composer > small {
   display: block;
-  max-width: 1000px;
+  max-width: var(--chat-column-width);
   margin: 8px auto 0;
   color: #7f8990;
   text-align: center;
@@ -441,7 +575,7 @@ textarea {
 }
 
 .error {
-  max-width: 1000px;
+  max-width: var(--chat-column-width);
   margin: 0 auto 8px;
   padding: 9px 12px;
   border-radius: 10px;
@@ -452,7 +586,7 @@ textarea {
 
 @media (max-width: 1180px) {
   .app-shell {
-    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-columns: 220px minmax(0, 1fr) 250px;
   }
 }
 
@@ -466,6 +600,17 @@ textarea {
   .sidebar-left {
     border-right: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .sidebar-right {
+    order: 2;
+    border-left: 0;
+    border-top: 1px solid rgba(25, 36, 42, 0.08);
+  }
+
+  .main {
+    order: 1;
+    min-height: 72vh;
   }
 
   .workspace-header {
@@ -484,11 +629,11 @@ textarea {
   }
 
   .message {
-    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-columns: 34px minmax(0, 1fr) 34px;
   }
 
   .message.user {
-    grid-template-columns: minmax(0, 1fr) 34px;
+    grid-template-columns: 34px minmax(0, 1fr) 34px;
   }
 
   .input-row {
@@ -497,5 +642,13 @@ textarea {
 
   .input-row button {
     width: 100%;
+  }
+
+  .evidence-header {
+    grid-template-columns: 1fr;
+  }
+
+  .evidence span {
+    text-align: left;
   }
 }

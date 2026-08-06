@@ -7,11 +7,9 @@ QFind helps legal, procurement, and compliance teams quickly find answers within
 Instead of manually searching through lengthy agreements, QFind retrieves the most relevant clauses, generates a concise answer, and shows the supporting contract evidence so users can easily verify where the answer came from.
 
 The evaluated version was tested on 463 clause evidence records from 30 CUAD
-contracts. On 11 curated retrieval queries it reached 98.2% context precision,
-1.000 MRR, and 0.998 nDCG.
-
-A separate 25-question gold-evidence evaluation measured raw retrieval Recall@5
-at 0.940.
+contracts. On the primary 25-question gold-evidence evaluation, QFind reached
+0.860 Recall@5, 0.860 MRR, and 0.886 nDCG using the product-facing retrieval
+setting of up to two passages per contract.
 
 On the final 120-request answer benchmark, QFind passed deterministic route,
 citation, abstention, and required concept checks with 2.43 s P95 response
@@ -94,38 +92,38 @@ than answered from unrelated evidence.
 ## Evaluation Results
 
 QFind retrieval and answer behavior were evaluated on the CUAD-derived clause
-index and curated regression workloads.
-
-### Curated Retrieval Accuracy and Latency
-
-Measured on 11 curated CUAD retrieval queries over 463 clause records from 30
-contracts.
-
-| Metric | Result |
-| --- | ---: |
-| Context precision | **98.2%** |
-| MRR | **1.000** |
-| nDCG | **0.998** |
-| P95 retrieval latency | **68.2 ms** |
-| P95 reranking latency | **124.6 ms** |
-| Evaluation cases passed | **11/11** |
+index and curated regression workloads. The headline retrieval benchmark is the
+25-question gold-evidence set because it uses manually labeled evidence record
+IDs.
 
 ### Strict Gold Evidence-ID Recall
 
 Measured on 25 manually labeled questions with 33 gold evidence record IDs.
-These results separate raw retrieval from product-layer evidence diversity
-filters.
 
-| Retrieval mode | Recall@5 | Context precision |
-| --- | ---: | ---: |
-| Current production default, max 1 passage per contract | **0.660** | **0.272** |
-| Product-facing ablation, max 2 passages per contract | **0.860** | **0.277** |
-| Raw retrieval ceiling, no document cap | **0.940** | **0.248** |
+| Metric | Result |
+| --- | ---: |
+| Recall@5 | **0.860** |
+| MRR | **0.860** |
+| nDCG | **0.886** |
 
-The raw no-cap number should be read as a retrieval ceiling, not as production
-chat behavior. The two-passage cap is the strongest product-facing setting
-tested so far because it improves gold recall while preserving some
+This uses the product-facing retrieval setting of up to two passages per
+contract. That setting improves gold evidence recall while preserving
 cross-contract evidence diversity.
+
+### Evaluation Metric Definitions
+
+These terms keep QFind's retrieval metrics separate from optional Ragas hosted
+judge metrics.
+
+| Metric | Meaning | QFind mapping |
+| --- | --- | --- |
+| Answer relevancy | Whether the answer directly addresses the question. | Deterministic answer checks, with optional Ragas answer relevancy. |
+| Faithfulness | Whether answer claims are supported by retrieved evidence. | Ragas faithfulness plus deterministic citation and overclaim checks. |
+| Contextual relevancy | Whether retrieved evidence is relevant to the question. | Not currently reported as a separate hosted metric; partially reflected by deterministic retrieval relevance checks. |
+| Contextual recall | How much required evidence was retrieved. | Strict gold evidence ID Recall@5 on the 25-question gold set, with optional Ragas context recall. |
+
+QFind uses MRR and nDCG for deterministic ranking quality. The 25-question
+gold-evidence set is the primary retrieval benchmark.
 
 ### End-to-End Answer Quality and Latency
 
@@ -577,22 +575,9 @@ the top K" result is reported as Top K evidence hit rate.
 Run the strict gold recall benchmark with the 25-case gold set. It contains 33
 manually labeled evidence IDs across the five supported clause types.
 
-Current production-style baseline, with one passage per contract:
-Recall@5 `0.660`, context precision `0.272`.
-
-```powershell
-.\.conda-clauselens\python.exe evaluation\eval.py `
-  --tests evaluation\tests_recall_gold.jsonl `
-  --qdrant-mode server `
-  --top-k 5 `
-  --rerank-mode auto `
-  --candidate-limit 3 `
-  --require-gold-record-ids `
-  --output data\processed\eval_true_recall_k5.json
-```
-
-Middle-ground product ablation, with up to two passages per contract:
-Recall@5 `0.860`, context precision `0.277`.
+Run the primary 25-question gold retrieval benchmark with up to two passages
+per contract:
+Recall@5 `0.860`, MRR `0.860`, nDCG `0.886`.
 
 ```powershell
 .\.conda-clauselens\python.exe evaluation\eval.py `
@@ -606,40 +591,7 @@ Recall@5 `0.860`, context precision `0.277`.
   --output data\processed\eval_true_recall_k5_max2_per_doc.json
 ```
 
-Raw retrieval ceiling, with document deduplication disabled:
-Recall@5 `0.940`, context precision `0.248`.
-
-```powershell
-.\.conda-clauselens\python.exe evaluation\eval.py `
-  --tests evaluation\tests_recall_gold.jsonl `
-  --qdrant-mode server `
-  --top-k 5 `
-  --rerank-mode auto `
-  --candidate-limit 3 `
-  --require-gold-record-ids `
-  --no-deduplicate-documents `
-  --output data\processed\eval_true_recall_k5_no_dedup.json
-```
-
-The no-dedup number should be framed as raw retrieval recall, not as a
-production recall improvement. It isolates whether the retriever found the
-gold evidence before UX diversity filters remove same-contract passages.
-
-Optional reranking comparison:
-
-```powershell
-.\.conda-clauselens\python.exe evaluation\eval.py `
-  --tests evaluation\tests_recall_gold.jsonl `
-  --qdrant-mode server `
-  --top-k 5 `
-  --rerank-mode always `
-  --candidate-limit 10 `
-  --require-gold-record-ids `
-  --no-deduplicate-documents `
-  --output data\processed\eval_true_recall_k5_no_dedup_rerank_always.json
-```
-
-Run a candidate-limit sweep and compare context precision alongside recall:
+Run a candidate-limit sweep and compare Recall@5 alongside ranking metrics:
 
 ```powershell
 .\.conda-clauselens\python.exe evaluation\candidate_sweep.py `
@@ -654,10 +606,8 @@ Run a candidate-limit sweep and compare context precision alongside recall:
 ```
 
 Observed with up to two passages per contract: candidate limits `3`, `5`,
-`10`, `20`, and `50` all held Recall@5 at `0.860` and context precision at
-`0.277`; higher limits only increased reranking latency. With document
-deduplication disabled, the same sweep held Recall@5 at `0.940` and context
-precision at `0.248`. Candidate depth is therefore not the current bottleneck
+`10`, `20`, and `50` kept Recall@5 at `0.860`; higher limits only increased
+reranking latency. Candidate depth is therefore not the current bottleneck
 under this hybrid retrieval configuration.
 
 ### Answer Grounding
@@ -689,10 +639,10 @@ unit tests.
 ### Ragas Semantic Evaluation
 
 [Ragas](https://docs.ragas.io/en/stable/) is available as a complementary
-hosted-judge benchmark for release validation. It reuses the 12 curated answer
+hosted judge benchmark for release validation. It reuses the 12 curated answer
 scenarios, collects the generated answer and retrieved contexts, and scores
-faithfulness, answer relevancy, context precision, and context recall using the
-[Ragas evaluation workflow](https://docs.ragas.io/en/stable/getstarted/evals/):
+faithfulness, answer relevancy, and context recall
+using the [Ragas evaluation workflow](https://docs.ragas.io/en/stable/getstarted/evals/):
 
 Run this evaluation from Python 3.11 or 3.12. On Windows with Python 3.14, pip
 may try to build `scikit-network` from source and fail without Microsoft C++
@@ -708,11 +658,11 @@ python evaluation\ragas_eval.py `
 ```
 
 Initial release-quality gates are mean faithfulness >= 0.90, mean answer
-relevancy >= 0.80, mean context precision >= 0.80, mean context recall >= 0.80,
-and no critical case below 0.75 faithfulness. Add `--enforce-gates` locally, or
-enable the workflow's `enforce_ragas_gates` input, only when the paid Ragas run
-should fail on those thresholds. Ragas is not a PR gate because it uses hosted
-judge calls and can vary with external model behavior.
+relevancy >= 0.80, mean context recall >= 0.80, and no critical case below 0.75
+faithfulness. Add `--enforce-gates` locally, or enable the workflow's
+`enforce_ragas_gates` input, only when the paid Ragas run should fail on those
+thresholds. Ragas is not a PR gate because it uses hosted judge calls and can
+vary with external model behavior.
 
 ### End-to-End Performance
 

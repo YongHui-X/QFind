@@ -262,27 +262,15 @@ def render_feedback(turn_id: str) -> None:
 
 
 def render_evidence(results: list[dict[str, object]]) -> None:
+    """Render retrieved evidence without exposing internal ranking scores."""
+
     if not results:
         return
 
     with st.expander(f"Show retrieved evidence ({len(results)})", expanded=False):
-        st.caption(
-            "Scores are ranking signals, not percentages. "
-            "Cross-encoder scores are unbounded."
-        )
         for index, item in enumerate(results, start=1):
-            reranker_score = item.get("reranker_score")
-            vector_score = item.get("vector_score")
-            if reranker_score is not None:
-                score_label = f"reranker {float(reranker_score):.3f}"
-            elif vector_score is not None:
-                score_label = f"similarity {float(vector_score):.3f}"
-            else:
-                score_label = f"ranking {float(item['score']):.3f}"
-
             st.markdown(
-                f"**{index}. {item['clause_type'] or 'Unknown clause'}** "
-                f"`{score_label}`"
+                f"**{index}. {item['clause_type'] or 'Unknown clause'}**"
             )
             if item.get("answer"):
                 st.caption(f"CUAD answer label: {item['answer']}")
