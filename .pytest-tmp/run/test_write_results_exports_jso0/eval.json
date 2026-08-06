@@ -1,0 +1,26 @@
+[
+  {
+    "question": "What audit rights does the customer have?",
+    "expected_clause_type": "Audit Rights",
+    "category": "clause_type",
+    "top_k": 1,
+    "result_count": 1,
+    "expected_clause_type_rank": 1,
+    "clause_type_mrr": 1.0,
+    "first_relevant_rank": 1,
+    "mrr": 1.0,
+    "recall_at_k": 1.0,
+    "hit_rate_at_k": 1.0,
+    "context_precision": 1.0,
+    "top1_clause_hit": true,
+    "topk_clause_hit": true,
+    "keyword_hit_rate": 1.0,
+    "keywords_found": 2,
+    "total_keywords": 2,
+    "ndcg": 1.0,
+    "reranking_enabled": false,
+    "retrieval_latency_ms": 0.0,
+    "reranking_latency_ms": 0.0,
+    "passed": true
+  }
+]

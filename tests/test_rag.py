@@ -252,6 +252,89 @@ def test_hybrid_search_fuses_and_deduplicates_documents() -> None:
     assert all(result.fused_score is not None for result in results)
 
 
+def test_search_clause_evidence_can_keep_multiple_passages_per_document() -> None:
+    client = FakeClient(
+        points=[
+            SimpleNamespace(
+                score=0.9,
+                payload={
+                    "id": "dense-1",
+                    "document_id": "doc-a",
+                    "text": "assignment",
+                },
+            ),
+            SimpleNamespace(
+                score=0.8,
+                payload={
+                    "id": "dense-2",
+                    "document_id": "doc-a",
+                    "text": "consent",
+                },
+            ),
+        ]
+    )
+
+    results = search_clause_evidence(
+        client=client,
+        model=FakeModel(),
+        query="assignment written consent",
+        clause_type="Anti-Assignment",
+        limit=3,
+        deduplicate_documents=False,
+    )
+
+    assert [result.record_id for result in results] == ["dense-1", "dense-2"]
+    assert [result.document_id for result in results] == ["doc-a", "doc-a"]
+
+
+def test_search_clause_evidence_limits_passages_per_document_to_two() -> None:
+    client = FakeClient(
+        points=[
+            SimpleNamespace(
+                score=0.9,
+                payload={"id": "dense-1", "document_id": "doc-a", "text": "first"},
+            ),
+            SimpleNamespace(
+                score=0.8,
+                payload={"id": "dense-2", "document_id": "doc-a", "text": "second"},
+            ),
+            SimpleNamespace(
+                score=0.7,
+                payload={"id": "dense-3", "document_id": "doc-a", "text": "third"},
+            ),
+            SimpleNamespace(
+                score=0.6,
+                payload={"id": "dense-4", "document_id": "doc-b", "text": "fourth"},
+            ),
+        ]
+    )
+
+    results = search_clause_evidence(
+        client=client,
+        model=FakeModel(),
+        query="assignment written consent",
+        clause_type="Anti-Assignment",
+        limit=4,
+        max_passages_per_document=2,
+    )
+
+    assert [result.record_id for result in results] == [
+        "dense-1",
+        "dense-2",
+        "dense-4",
+    ]
+
+
+def test_search_clause_evidence_rejects_non_positive_document_limit() -> None:
+    with pytest.raises(ValueError, match="max_passages_per_document"):
+        search_clause_evidence(
+            client=FakeClient(),
+            model=FakeModel(),
+            query="assignment",
+            max_passages_per_document=0,
+        )
+
+
 def test_create_qdrant_client_passes_api_key_for_server_mode(monkeypatch) -> None:
     captured: dict[str, object] = {}
 

@@ -20,6 +20,10 @@ class RetrievalTestCase(BaseModel):
     )
     expected_record_ids: list[str] = Field(default_factory=list)
     category: str = Field(description="Evaluation category")
+    labeling_notes: str | None = Field(
+        default=None,
+        description="Short note explaining the gold passage selection",
+    )
 
 
 def load_tests(path: str | Path = DEFAULT_TEST_FILE) -> list[RetrievalTestCase]:

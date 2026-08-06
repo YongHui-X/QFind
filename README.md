@@ -6,11 +6,16 @@ QFind helps legal, procurement, and compliance teams quickly find answers within
 
 Instead of manually searching through lengthy agreements, QFind retrieves the most relevant clauses, generates a concise answer, and shows the supporting contract evidence so users can easily verify where the answer came from.
 
-The evaluated version of this RAG chatbot was tested on 463 clause evidence
-records from 30 CUAD contracts. On 11 curated retrieval test questions it reached
-100% Recall@5, 98.2% average context precision, 1.000 MRR, and 0.998 nDCG.
-On the final 120-request answer benchmark, it passed deterministic
-route/citation/concept checks for repeated runs of 12 curated answer cases.
+The evaluated version was tested on 463 clause evidence records from 30 CUAD
+contracts. On 11 curated retrieval queries it reached 98.2% context precision,
+1.000 MRR, and 0.998 nDCG.
+
+A separate 25-question gold-evidence evaluation measured raw retrieval Recall@5
+at 0.940.
+
+On the final 120-request answer benchmark, QFind passed deterministic route,
+citation, abstention, and required concept checks with 2.43 s P95 response
+latency.
 
 **Live production demo:** [qfind-736872970476.asia-southeast1.run.app](https://qfind-736872970476.asia-southeast1.run.app/)  
 
@@ -88,20 +93,39 @@ than answered from unrelated evidence.
 
 ## Evaluation Results
 
-The final configuration was evaluated on 463 clause records from 30 CUAD
-contracts.
+QFind retrieval and answer behavior were evaluated on the CUAD-derived clause
+index and curated regression workloads.
 
-### Retrieval Accuracy and Latency
+### Curated Retrieval Accuracy and Latency
+
+Measured on 11 curated CUAD retrieval queries over 463 clause records from 30
+contracts.
 
 | Metric | Result |
 | --- | ---: |
-| Recall@5 | **100%** |
 | Context precision | **98.2%** |
 | MRR | **1.000** |
 | nDCG | **0.998** |
 | P95 retrieval latency | **68.2 ms** |
 | P95 reranking latency | **124.6 ms** |
 | Evaluation cases passed | **11/11** |
+
+### Strict Gold Evidence-ID Recall
+
+Measured on 25 manually labeled questions with 33 gold evidence record IDs.
+These results separate raw retrieval from product-layer evidence diversity
+filters.
+
+| Retrieval mode | Recall@5 | Context precision |
+| --- | ---: | ---: |
+| Current production default, max 1 passage per contract | **0.660** | **0.272** |
+| Product-facing ablation, max 2 passages per contract | **0.860** | **0.277** |
+| Raw retrieval ceiling, no document cap | **0.940** | **0.248** |
+
+The raw no-cap number should be read as a retrieval ceiling, not as production
+chat behavior. The two-passage cap is the strongest product-facing setting
+tested so far because it improves gold recall while preserving some
+cross-contract evidence diversity.
 
 ### End-to-End Answer Quality and Latency
 
@@ -247,10 +271,15 @@ The current hybrid retrieval configuration is:
 BGE dense retrieval: 6 candidates
 BM25 keyword retrieval: 6 candidates
 Fusion: reciprocal-rank fusion, k=60
-Deduplication: one leading passage per contract
+Deduplication: one leading passage per contract by default
 Reranking: adaptive, top 3 candidates
 Returned evidence: top 3 passages in the React chat UI
 ```
+
+Contract deduplication is kept on for user-facing search so evidence covers
+more agreements instead of repeating passages from one source. Strict gold
+recall evaluation disables it because several benchmark questions have
+multiple gold evidence records in the same agreement.
 
 ## Technology Stack
 
@@ -540,7 +569,96 @@ python evaluation\eval.py `
 ```
 
 The evaluator uses the production clause router and scores passage relevance,
-not only clause-category matches.
+not only clause-category matches. `Recall@K` is reserved for gold ID based
+recall, calculated as retrieved gold passage IDs in the top K divided by all
+gold passage IDs for that question. The older "at least one correct passage in
+the top K" result is reported as Top K evidence hit rate.
+
+Run the strict gold recall benchmark with the 25-case gold set. It contains 33
+manually labeled evidence IDs across the five supported clause types.
+
+Current production-style baseline, with one passage per contract:
+Recall@5 `0.660`, context precision `0.272`.
+
+```powershell
+.\.conda-clauselens\python.exe evaluation\eval.py `
+  --tests evaluation\tests_recall_gold.jsonl `
+  --qdrant-mode server `
+  --top-k 5 `
+  --rerank-mode auto `
+  --candidate-limit 3 `
+  --require-gold-record-ids `
+  --output data\processed\eval_true_recall_k5.json
+```
+
+Middle-ground product ablation, with up to two passages per contract:
+Recall@5 `0.860`, context precision `0.277`.
+
+```powershell
+.\.conda-clauselens\python.exe evaluation\eval.py `
+  --tests evaluation\tests_recall_gold.jsonl `
+  --qdrant-mode server `
+  --top-k 5 `
+  --rerank-mode auto `
+  --candidate-limit 3 `
+  --max-passages-per-document 2 `
+  --require-gold-record-ids `
+  --output data\processed\eval_true_recall_k5_max2_per_doc.json
+```
+
+Raw retrieval ceiling, with document deduplication disabled:
+Recall@5 `0.940`, context precision `0.248`.
+
+```powershell
+.\.conda-clauselens\python.exe evaluation\eval.py `
+  --tests evaluation\tests_recall_gold.jsonl `
+  --qdrant-mode server `
+  --top-k 5 `
+  --rerank-mode auto `
+  --candidate-limit 3 `
+  --require-gold-record-ids `
+  --no-deduplicate-documents `
+  --output data\processed\eval_true_recall_k5_no_dedup.json
+```
+
+The no-dedup number should be framed as raw retrieval recall, not as a
+production recall improvement. It isolates whether the retriever found the
+gold evidence before UX diversity filters remove same-contract passages.
+
+Optional reranking comparison:
+
+```powershell
+.\.conda-clauselens\python.exe evaluation\eval.py `
+  --tests evaluation\tests_recall_gold.jsonl `
+  --qdrant-mode server `
+  --top-k 5 `
+  --rerank-mode always `
+  --candidate-limit 10 `
+  --require-gold-record-ids `
+  --no-deduplicate-documents `
+  --output data\processed\eval_true_recall_k5_no_dedup_rerank_always.json
+```
+
+Run a candidate-limit sweep and compare context precision alongside recall:
+
+```powershell
+.\.conda-clauselens\python.exe evaluation\candidate_sweep.py `
+  --tests evaluation\tests_recall_gold.jsonl `
+  --qdrant-mode server `
+  --top-k 5 `
+  --rerank-mode auto `
+  --candidate-limits 3 5 10 20 50 `
+  --max-passages-per-document 2 `
+  --require-gold-record-ids `
+  --output data\processed\candidate_limit_sweep_max2.json
+```
+
+Observed with up to two passages per contract: candidate limits `3`, `5`,
+`10`, `20`, and `50` all held Recall@5 at `0.860` and context precision at
+`0.277`; higher limits only increased reranking latency. With document
+deduplication disabled, the same sweep held Recall@5 at `0.940` and context
+precision at `0.248`. Candidate depth is therefore not the current bottleneck
+under this hybrid retrieval configuration.
 
 ### Answer Grounding
 
@@ -721,10 +839,12 @@ frontend/
 evaluation/
   answer_eval.py           generated-answer evaluation
   answer_tests.jsonl       answer-quality cases
+  candidate_sweep.py       candidate-depth retrieval ablation
   chat_benchmark.py        stage-level latency benchmark
   eval.py                  passage-level retrieval evaluation
   performance_benchmark.py end-to-end acceptance workload
   tests.jsonl              retrieval cases
+  tests_recall_gold.jsonl  strict gold evidence-ID cases
 
 scripts/
   prepare_cuad_subset.py   prepares clause evidence
@@ -748,7 +868,7 @@ The current suite covers:
 - CUAD parsing and record preparation.
 - Incremental indexing.
 - Dense, lexical, fused, and reranked retrieval.
-- Contract-level deduplication.
+- Contract-level deduplication and per-document passage caps.
 - Clause routing and follow-up contextualization.
 - Citation and grounding behavior.
 - API endpoints and validation.
@@ -760,8 +880,8 @@ The current suite covers:
 - Only five clause categories are supported.
 - The benchmark uses a curated, sequential workload rather than concurrent
   production traffic.
-- The retrieval evaluation uses 11 curated test questions, so it is useful but
-  still small.
+- Retrieval quality is measured with 11 curated regression queries and a
+  stricter 25-case gold evidence-ID set. Both are useful but still small.
 - The system assists contract review and does not replace legal judgment.
 - Hosted-model latency prevents the stricter 2.0-second P95 and 700 ms
   first-token targets from being met consistently.

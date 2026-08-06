@@ -18,7 +18,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.chat import choose_reranking, infer_clause_type  # noqa: E402
 from app.rag import (  # noqa: E402
     COLLECTION,
     EMBEDDING_MODEL,
@@ -33,6 +32,7 @@ from app.rag import (  # noqa: E402
     load_reranker_model,
     search_clause_evidence,
 )
+from app.routing import choose_reranking, infer_clause_type  # noqa: E402
 from evaluation.cases import (  # noqa: E402
     DEFAULT_TEST_FILE,
     RetrievalTestCase,
@@ -50,6 +50,11 @@ RESULT_COLUMNS = [
     "first_relevant_rank",
     "mrr",
     "recall_at_k",
+    "hit_rate_at_k",
+    "expected_record_ids",
+    "retrieved_record_ids",
+    "gold_record_ids_found",
+    "missing_gold_record_ids",
     "context_precision",
     "top1_clause_hit",
     "topk_clause_hit",
@@ -58,6 +63,9 @@ RESULT_COLUMNS = [
     "total_keywords",
     "ndcg",
     "reranking_enabled",
+    "candidate_count",
+    "max_passages_per_document",
+    "rerank_reason",
     "retrieval_latency_ms",
     "reranking_latency_ms",
     "passed",
@@ -78,6 +86,11 @@ class RetrievalEvalResult:
     first_relevant_rank: int | None
     mrr: float
     recall_at_k: float
+    hit_rate_at_k: float
+    expected_record_ids: tuple[str, ...]
+    retrieved_record_ids: tuple[str, ...]
+    gold_record_ids_found: tuple[str, ...]
+    missing_gold_record_ids: tuple[str, ...]
     context_precision: float
     top1_clause_hit: bool
     topk_clause_hit: bool
@@ -86,6 +99,9 @@ class RetrievalEvalResult:
     total_keywords: int
     ndcg: float
     reranking_enabled: bool = False
+    candidate_count: int = 0
+    max_passages_per_document: int | None = 1
+    rerank_reason: str = ""
     retrieval_latency_ms: float = 0.0
     reranking_latency_ms: float = 0.0
 
@@ -160,10 +176,10 @@ def is_relevant_result(
     result: ClauseSearchResult,
     test_case: RetrievalTestCase,
 ) -> bool:
-    """Judge passage relevance using gold IDs or passage-level concepts."""
+    """Judge passage relevance for rank, nDCG, and context precision."""
 
     if test_case.expected_record_ids:
-        return result.record_id in set(test_case.expected_record_ids)
+        return is_gold_result(result, test_case)
     return (
         result.clause_type == test_case.expected_clause_type
         and any(
@@ -173,11 +189,22 @@ def is_relevant_result(
     )
 
 
+def is_gold_result(
+    result: ClauseSearchResult,
+    test_case: RetrievalTestCase,
+) -> bool:
+    """Return whether a retrieved passage matches a gold evidence record ID."""
+
+    return result.record_id in set(test_case.expected_record_ids)
+
+
 def calculate_passage_ndcg(
     results: list[ClauseSearchResult],
     test_case: RetrievalTestCase,
     k: int,
 ) -> float:
+    """Calculate binary nDCG using the case's passage relevance judgment."""
+
     relevances = [
         1 if is_relevant_result(result, test_case) else 0
         for result in results[:k]
@@ -219,6 +246,11 @@ def result_rows(results: list[RetrievalEvalResult]) -> list[dict[str, Any]]:
             "first_relevant_rank": result.first_relevant_rank,
             "mrr": round(result.mrr, 4),
             "recall_at_k": round(result.recall_at_k, 4),
+            "hit_rate_at_k": round(result.hit_rate_at_k, 4),
+            "expected_record_ids": list(result.expected_record_ids),
+            "retrieved_record_ids": list(result.retrieved_record_ids),
+            "gold_record_ids_found": list(result.gold_record_ids_found),
+            "missing_gold_record_ids": list(result.missing_gold_record_ids),
             "context_precision": round(result.context_precision, 4),
             "top1_clause_hit": result.top1_clause_hit,
             "topk_clause_hit": result.topk_clause_hit,
@@ -227,6 +259,9 @@ def result_rows(results: list[RetrievalEvalResult]) -> list[dict[str, Any]]:
             "total_keywords": result.total_keywords,
             "ndcg": round(result.ndcg, 4),
             "reranking_enabled": result.reranking_enabled,
+            "candidate_count": result.candidate_count,
+            "max_passages_per_document": result.max_passages_per_document,
+            "rerank_reason": result.rerank_reason,
             "retrieval_latency_ms": round(result.retrieval_latency_ms, 3),
             "reranking_latency_ms": round(result.reranking_latency_ms, 3),
             "passed": result.passed,
@@ -263,6 +298,9 @@ def evaluate_case(
     *,
     top_k: int,
     reranking_enabled: bool = False,
+    candidate_count: int = 0,
+    max_passages_per_document: int | None = 1,
+    rerank_reason: str = "",
     retrieval_latency_ms: float = 0.0,
     reranking_latency_ms: float = 0.0,
 ) -> RetrievalEvalResult:
@@ -280,16 +318,38 @@ def evaluate_case(
     relevant_flags = [
         is_relevant_result(result, test_case) for result in results[:top_k]
     ]
+    gold_flags = [
+        is_gold_result(result, test_case) for result in results[:top_k]
+    ]
     first_relevant_rank = next(
         (index for index, relevant in enumerate(relevant_flags, start=1) if relevant),
         None,
     )
     relevant_count = sum(relevant_flags)
-    recall_at_k = (
-        relevant_count / len(test_case.expected_record_ids)
-        if test_case.expected_record_ids
-        else float(bool(relevant_count))
+    gold_relevant_count = sum(gold_flags)
+    expected_record_ids = tuple(test_case.expected_record_ids)
+    retrieved_record_ids = tuple(
+        record_id
+        for result in results[:top_k]
+        if (record_id := result.record_id) is not None
     )
+    retrieved_record_id_set = set(retrieved_record_ids)
+    gold_record_ids_found = tuple(
+        record_id
+        for record_id in expected_record_ids
+        if record_id in retrieved_record_id_set
+    )
+    missing_gold_record_ids = tuple(
+        record_id
+        for record_id in expected_record_ids
+        if record_id not in retrieved_record_id_set
+    )
+    recall_at_k = (
+        gold_relevant_count / len(test_case.expected_record_ids)
+        if test_case.expected_record_ids
+        else 0.0
+    )
+    hit_rate_at_k = float(any(gold_flags)) if test_case.expected_record_ids else 0.0
     context_precision = relevant_count / len(relevant_flags) if relevant_flags else 0.0
 
     return RetrievalEvalResult(
@@ -303,6 +363,11 @@ def evaluate_case(
         first_relevant_rank=first_relevant_rank,
         mrr=(1.0 / first_relevant_rank) if first_relevant_rank else 0.0,
         recall_at_k=recall_at_k,
+        hit_rate_at_k=hit_rate_at_k,
+        expected_record_ids=expected_record_ids,
+        retrieved_record_ids=retrieved_record_ids,
+        gold_record_ids_found=gold_record_ids_found,
+        missing_gold_record_ids=missing_gold_record_ids,
         context_precision=context_precision,
         top1_clause_hit=top1_clause_hit,
         topk_clause_hit=topk_clause_hit,
@@ -311,8 +376,36 @@ def evaluate_case(
         total_keywords=total_keywords,
         ndcg=calculate_passage_ndcg(results, test_case, top_k),
         reranking_enabled=reranking_enabled,
+        candidate_count=candidate_count,
+        max_passages_per_document=max_passages_per_document,
+        rerank_reason=rerank_reason,
         retrieval_latency_ms=retrieval_latency_ms,
         reranking_latency_ms=reranking_latency_ms,
+    )
+
+
+def validate_gold_record_ids(
+    test_cases: list[RetrievalTestCase],
+    tests_path: Path,
+) -> None:
+    """Require every evaluation case to carry gold passage IDs."""
+
+    missing = [
+        (index, test_case.question)
+        for index, test_case in enumerate(test_cases, start=1)
+        if not test_case.expected_record_ids
+    ]
+    if not missing:
+        return
+
+    preview = "; ".join(
+        f"case {index}: {question}" for index, question in missing[:5]
+    )
+    suffix = f"; and {len(missing) - 5} more" if len(missing) > 5 else ""
+    raise ValueError(
+        "--require-gold-record-ids requires non-empty expected_record_ids "
+        f"for every case in {tests_path}. Missing {len(missing)} case(s): "
+        f"{preview}{suffix}"
     )
 
 
@@ -329,10 +422,22 @@ def evaluate_all(
     rerank: bool = False,
     rerank_mode: str | None = None,
     candidate_limit: int = 20,
+    deduplicate_documents: bool = True,
+    max_passages_per_document: int | None = 1,
+    require_gold_record_ids: bool = False,
 ) -> list[RetrievalEvalResult]:
     """Run retrieval evaluation for all test cases."""
 
+    if max_passages_per_document is not None and max_passages_per_document < 1:
+        raise ValueError("max_passages_per_document must be at least 1")
+
+    effective_document_limit = (
+        max_passages_per_document if deduplicate_documents else None
+    )
     test_cases = load_tests(tests_path)
+    if require_gold_record_ids:
+        validate_gold_record_ids(test_cases, tests_path)
+
     client = (
         create_qdrant_client(url=qdrant_url)
         if qdrant_mode == "server"
@@ -382,6 +487,8 @@ def evaluate_all(
             rerank=case_rerank,
             candidate_limit=candidate_limit,
             lexical_index=lexical_index,
+            deduplicate_documents=deduplicate_documents,
+            max_passages_per_document=max_passages_per_document,
             adaptive_rerank=rerank_mode == "auto",
             diagnostics=diagnostics,
         )
@@ -396,6 +503,9 @@ def evaluate_all(
                 retrieved,
                 top_k=top_k,
                 reranking_enabled=diagnostics.reranking_applied,
+                candidate_count=diagnostics.candidate_count,
+                max_passages_per_document=effective_document_limit,
+                rerank_reason=diagnostics.rerank_reason,
                 retrieval_latency_ms=retrieval_latency_ms,
                 reranking_latency_ms=diagnostics.reranking_latency_ms,
             )
@@ -415,6 +525,7 @@ def print_summary(results: list[RetrievalEvalResult]) -> None:
     avg_mrr = sum(result.mrr for result in results) / len(results)
     avg_ndcg = sum(result.ndcg for result in results) / len(results)
     avg_recall = sum(result.recall_at_k for result in results) / len(results)
+    avg_hit_rate = sum(result.hit_rate_at_k for result in results) / len(results)
     avg_precision = sum(result.context_precision for result in results) / len(results)
     avg_keyword_hit_rate = (
         sum(result.keyword_hit_rate for result in results) / len(results)
@@ -433,10 +544,11 @@ def print_summary(results: list[RetrievalEvalResult]) -> None:
     print("QFind Retrieval Evaluation")
     print("=" * 36)
     print(f"Cases: {len(results)}")
-    print(f"Passed: {pass_count}/{len(results)}")
+    print(f"Legacy pass gate: {pass_count}/{len(results)}")
     print(f"Average passage MRR: {avg_mrr:.3f}")
     print(f"Average passage nDCG: {avg_ndcg:.3f}")
-    print(f"Average Recall@k: {avg_recall:.3f}")
+    print(f"Average gold Recall@k: {avg_recall:.3f}")
+    print(f"Top-k evidence hit rate: {avg_hit_rate:.1%}")
     print(f"Average context precision: {avg_precision:.3f}")
     print(f"Top-1 clause hit rate: {top1_hit_rate:.1%}")
     print(f"Top-k clause hit rate: {topk_hit_rate:.1%}")
@@ -448,11 +560,16 @@ def print_summary(results: list[RetrievalEvalResult]) -> None:
     for index, result in enumerate(results, start=1):
         rank = result.expected_clause_type_rank
         rank_text = str(rank) if rank is not None else "not found"
-        status = "PASS" if result.passed else "FAIL"
-        print(f"{index}. {status} [{result.category}] {result.question}")
+        gold_status = "hit" if result.hit_rate_at_k else "miss"
+        print(
+            f"{index}. Recall@{result.top_k}: {result.recall_at_k:.3f} "
+            f"({gold_status}) [{result.category}] {result.question}"
+        )
         print(f"   expected clause: {result.expected_clause_type} | rank: {rank_text}")
         print(
-            "   keywords: "
+            "   gold found: "
+            f"{len(result.gold_record_ids_found)}/{len(result.expected_record_ids)} | "
+            "keywords: "
             f"{result.keywords_found}/{result.total_keywords} | "
             f"nDCG: {result.ndcg:.3f}"
         )
@@ -475,6 +592,29 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reranker-model", default=RERANKER_MODEL)
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--candidate-limit", type=int, default=20)
+    parser.add_argument(
+        "--max-passages-per-document",
+        type=int,
+        default=1,
+        help=(
+            "Maximum passages to keep from each source document when document "
+            "deduplication is enabled. Use 2 to test a middle ground."
+        ),
+    )
+    parser.add_argument(
+        "--deduplicate-documents",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Keep only the top passage per source document. Use "
+            "--no-deduplicate-documents for strict gold recall measurement."
+        ),
+    )
+    parser.add_argument(
+        "--require-gold-record-ids",
+        action="store_true",
+        help="Fail if any test case lacks expected_record_ids for true recall.",
+    )
     parser.add_argument(
         "--rerank",
         action=argparse.BooleanOptionalAction,
@@ -499,19 +639,25 @@ def main() -> None:
     rerank = args.rerank
     if args.rerank_mode:
         rerank = args.rerank_mode != "off"
-    results = evaluate_all(
-        tests_path=args.tests,
-        qdrant_path=args.qdrant_path,
-        qdrant_mode=args.qdrant_mode,
-        qdrant_url=args.qdrant_url,
-        collection_name=args.collection,
-        model_name=args.model,
-        reranker_model_name=args.reranker_model,
-        top_k=args.top_k,
-        rerank=rerank,
-        rerank_mode=args.rerank_mode,
-        candidate_limit=args.candidate_limit,
-    )
+    try:
+        results = evaluate_all(
+            tests_path=args.tests,
+            qdrant_path=args.qdrant_path,
+            qdrant_mode=args.qdrant_mode,
+            qdrant_url=args.qdrant_url,
+            collection_name=args.collection,
+            model_name=args.model,
+            reranker_model_name=args.reranker_model,
+            top_k=args.top_k,
+            rerank=rerank,
+            rerank_mode=args.rerank_mode,
+            candidate_limit=args.candidate_limit,
+            deduplicate_documents=args.deduplicate_documents,
+            max_passages_per_document=args.max_passages_per_document,
+            require_gold_record_ids=args.require_gold_record_ids,
+        )
+    except ValueError as exc:
+        raise SystemExit(f"Error: {exc}") from None
     print_summary(results)
     if args.output:
         write_results(args.output, results)

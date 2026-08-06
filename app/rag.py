@@ -21,7 +21,7 @@ import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -34,7 +34,12 @@ from qdrant_client.models import (
     PointStruct,
     VectorParams,
 )
-from sentence_transformers import CrossEncoder, SentenceTransformer
+
+if TYPE_CHECKING:
+    from sentence_transformers import CrossEncoder, SentenceTransformer
+else:
+    CrossEncoder = Any
+    SentenceTransformer = Any
 
 # Name of the Qdrant collection where contract clause vectors are stored.
 COLLECTION = "contracts_clause_evidence"
@@ -163,6 +168,7 @@ class SearchDiagnostics:
     lexical_search_latency_ms: float = 0.0
     reranking_latency_ms: float = 0.0
     candidate_count: int = 0
+    max_passages_per_document: int | None = 1
     confidence: float = 0.0
     reranking_applied: bool = False
     rerank_reason: str = "not requested"
@@ -435,13 +441,17 @@ def load_embedding_model(model_name: str = EMBEDDING_MODEL) -> SentenceTransform
     happens.
     """
 
-    return SentenceTransformer(model_name)
+    from sentence_transformers import SentenceTransformer as SentenceTransformerLoader
+
+    return SentenceTransformerLoader(model_name)
 
 
 def load_reranker_model(model_name: str = RERANKER_MODEL) -> CrossEncoder:
     """Load the cross-encoder used to rerank vector-search candidates."""
 
-    return CrossEncoder(model_name)
+    from sentence_transformers import CrossEncoder as CrossEncoderLoader
+
+    return CrossEncoderLoader(model_name)
 
 
 def make_clause_type_filter(clause_type: str | None) -> Filter:
@@ -476,6 +486,8 @@ def search_clause_evidence(
     candidate_limit: int = RERANK_CANDIDATE_LIMIT,
     lexical_index: LexicalIndex | None = None,
     hybrid_candidate_limit: int = HYBRID_CANDIDATE_LIMIT,
+    deduplicate_documents: bool = True,
+    max_passages_per_document: int | None = 1,
     adaptive_rerank: bool = False,
     diagnostics: SearchDiagnostics | None = None,
 ) -> list[ClauseSearchResult]:
@@ -494,6 +506,9 @@ def search_clause_evidence(
 
     if candidate_limit < 1:
         raise ValueError("candidate_limit must be at least 1")
+
+    if max_passages_per_document is not None and max_passages_per_document < 1:
+        raise ValueError("max_passages_per_document must be at least 1")
 
     if rerank and reranker is None:
         raise ValueError("reranker is required when rerank is enabled")
@@ -552,9 +567,16 @@ def search_clause_evidence(
             ) * 1000
         candidates = reciprocal_rank_fusion(dense_candidates, lexical_results)
 
-    candidates = deduplicate_by_document(candidates)
+    effective_document_limit = (
+        max_passages_per_document if deduplicate_documents else None
+    )
+    candidates = limit_passages_per_document(
+        candidates,
+        max_passages_per_document=effective_document_limit,
+    )
     if diagnostics is not None:
         diagnostics.candidate_count = len(candidates)
+        diagnostics.max_passages_per_document = effective_document_limit
         diagnostics.confidence = retrieval_confidence(candidates)
 
     should_rerank = rerank
@@ -664,13 +686,26 @@ def deduplicate_by_document(
 ) -> list[ClauseSearchResult]:
     """Keep the highest-ranked passage from each contract document."""
 
+    return limit_passages_per_document(results, max_passages_per_document=1)
+
+
+def limit_passages_per_document(
+    results: list[ClauseSearchResult],
+    *,
+    max_passages_per_document: int | None,
+) -> list[ClauseSearchResult]:
+    """Keep up to a configured number of passages from each contract document."""
+
+    if max_passages_per_document is None:
+        return results
+
     selected: list[ClauseSearchResult] = []
-    seen: set[str] = set()
+    counts: defaultdict[str, int] = defaultdict(int)
     for result in results:
         document_key = result.document_id or result.record_id or result.text
-        if document_key in seen:
+        if counts[document_key] >= max_passages_per_document:
             continue
-        seen.add(document_key)
+        counts[document_key] += 1
         selected.append(result)
     return selected
 
